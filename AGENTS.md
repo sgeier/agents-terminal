@@ -26,6 +26,8 @@ Prefer Makefile targets as a single entrypoint; fall back to language defaults.
 - make lint: Lint and format checks.
 - make run: Run the local CLI/app.
 
+Project docs: see `docs/README.md` for quickstart, UI usage, APIs, and persistence details.
+
 If no Makefile exists, typical commands:
 - Node.js: npm test, npm run dev, npm run lint
 - Python: pytest -q, ruff check ., black --check .
@@ -50,4 +52,3 @@ If no Makefile exists, typical commands:
 - Never commit secrets; use .env and add .env.example.
 - Minimize permissions for tokens; rotate regularly.
 - Avoid network calls in tests unless mocked.
-
