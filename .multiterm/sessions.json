@@ -1,0 +1,14 @@
+{
+  "sessions": [
+    {
+      "id": "fb1fe4c8-a70d-4992-b6d5-49e47d56c4c1",
+      "pid": 37651,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T13:13:09.739Z",
+      "status": "running"
+    }
+  ]
+}

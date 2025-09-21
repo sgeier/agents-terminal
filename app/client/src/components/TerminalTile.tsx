@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebglAddon } from '@xterm/addon-webgl';
@@ -17,6 +17,16 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
   const [outstanding, setOutstanding] = useState(0);
   const seqRef = useRef(0);
   const streamRef = useRef<ReturnType<typeof createStream> | null>(null);
+  const projectId = project?.id || session.projectId;
+  const prefKey = useMemo(() => (k: string) => `mt.${projectId}.${k}`, [projectId]);
+  const [fontSize, setFontSize] = useState<number>(() => {
+    const raw = localStorage.getItem(prefKey('fontSize')) || localStorage.getItem('mt.fontSize.default');
+    const n = raw ? Number(raw) : NaN; return Number.isFinite(n) ? n : 13;
+  });
+  const [termHeight, setTermHeight] = useState<number>(() => {
+    const raw = localStorage.getItem(prefKey('termHeight'));
+    const n = raw ? Number(raw) : NaN; return Number.isFinite(n) ? n : 320;
+  });
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains('dark');
@@ -24,6 +34,7 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
       convertEol: true,
       fontFamily: 'Menlo, Monaco, Consolas, ui-monospace, monospace',
       scrollback: 5000,
+      fontSize,
       theme: isDark ? {
         background: '#0b1220',
         foreground: '#e5e7eb',
@@ -59,9 +70,15 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
 
     const ro = new ResizeObserver(() => {
       fit.fit();
-      const dims = term._core._renderService.dimensions; // eslint-disable-line @typescript-eslint/no-explicit-any
       const cols = term.cols, rows = term.rows;
       api.resize(session.id, cols, rows).catch(() => {});
+      if (ref.current) {
+        const h = ref.current.clientHeight;
+        if (Math.abs(h - termHeight) > 2) {
+          setTermHeight(h);
+          try { localStorage.setItem(prefKey('termHeight'), String(h)); } catch {}
+        }
+      }
     });
     if (ref.current) ro.observe(ref.current);
 
@@ -89,17 +106,30 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
   const labelCmd = session.command?.[0] ? session.command[0] : 'shell';
   const headerTitle = `${project?.name || session.cwd.split('/').pop()} • ${labelCmd} • pid ${session.pid ?? '—'}`;
 
+  function adjustFont(delta: number) {
+    const next = Math.min(20, Math.max(10, fontSize + delta));
+    setFontSize(next);
+    try { localStorage.setItem(prefKey('fontSize'), String(next)); } catch {}
+    if (termRef.current && fitRef.current) {
+      // @ts-expect-error xterm option setter
+      (termRef.current.options as any).fontSize = next;
+      setTimeout(() => { fitRef.current!.fit(); api.resize(session.id, termRef.current!.cols, termRef.current!.rows).catch(() => {}); }, 10);
+    }
+  }
+
   return (
     <div className="tile">
       <div className="tile-h">
         <strong style={{ marginRight: 8 }}>{headerTitle}</strong>
         <span>• {session.status}{session.exitCode !== undefined ? ` (${session.exitCode})` : ''}</span>
-        <div style={{ marginLeft: 'auto' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button className="btn" title="Font smaller" onClick={() => adjustFont(-1)}>A−</button>
+          <button className="btn" title="Font larger" onClick={() => adjustFont(+1)}>A+</button>
           <button className="btn" onClick={() => api.stopSession(session.id)}>Stop</button>
           <button className="btn" onClick={() => { api.deleteSession(session.id).then(() => onClose(session.id)); }}>Close</button>
         </div>
       </div>
-      <div className="term" ref={ref} />
+      <div className="term" ref={ref} style={{ height: termHeight, resize: 'vertical', overflow: 'auto', flex: 'unset' }} />
       <div className="tile-f">
         <span><span className={`status-dot ${footerState}`}></span> {conn}</span>
         <span>Scrollback ≤ 5000 • PTY: {session.pty ? 'yes' : 'no'}</span>
