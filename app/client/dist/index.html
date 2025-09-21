@@ -44,8 +44,19 @@
       .polling { background: #f59e0b; }
       .reconnecting { background: #ef4444; }
       .closed { background: #6b7280; }
+
+      /* Select (shadcn-like) */
+      .select-wrap { position: relative; }
+      .select { appearance: none; -webkit-appearance: none; -moz-appearance: none; padding: 6px 28px 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--btn-bg); color: var(--fg); font-size: 14px; }
+      .select-wrap:after { content: ""; position: absolute; right: 10px; top: 50%; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--muted); transform: translateY(-30%); pointer-events: none; }
+
+      /* Modal */
+      .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 50; }
+      .modal { width: min(720px, 92vw); background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+      .modal-h { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+      .modal-b { padding: 14px; }
     </style>
-    <script type="module" crossorigin src="/assets/index-DcL4H3uf.js"></script>
+    <script type="module" crossorigin src="/assets/index-BHdVEJUO.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-Beg8tuEN.css">
   </head>
   <body>

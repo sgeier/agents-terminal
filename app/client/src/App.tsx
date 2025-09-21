@@ -3,6 +3,7 @@ import { Projects } from '@/pages/Projects';
 import { Dashboard } from '@/pages/Dashboard';
 import type { Project, TerminalSession } from '@/types/domain';
 import { api } from '@/lib/api';
+import { Modal } from '@/components/Modal';
 
 export default function App() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -95,13 +96,15 @@ export default function App() {
       <div className="header">
         <div className="left">
           <strong>Agents Terminal</strong>
-          <select value={selectedId ?? ''} onChange={(e) => onSelect(e.target.value)}>
-            <option value="">Select project…</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-          <button className="btn" onClick={() => setShowProjects((v) => !v)}>Projects…</button>
+          <span className="select-wrap">
+            <select className="select" value={selectedId ?? ''} onChange={(e) => onSelect(e.target.value)}>
+              <option value="">Select project…</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </span>
+          <button className="btn" onClick={() => setShowProjects(true)}>Projects…</button>
         </div>
         <div className="right">
           <button className="btn" onClick={spawnCodex}>Spawn</button>
@@ -110,11 +113,9 @@ export default function App() {
           <button className="btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? '☀️' : '🌙'}</button>
         </div>
       </div>
-      {showProjects && (
-        <div style={{ padding: 8, borderBottom: '1px solid #eee' }}>
-          <Projects onOpen={(p) => { setShowProjects(false); onSelect(p.id); setProjects((v) => [...v.filter(x => x.id !== p.id), p]); }} />
-        </div>
-      )}
+      <Modal title="Projects" open={showProjects} onClose={() => setShowProjects(false)}>
+        <Projects onOpen={(p) => { setShowProjects(false); onSelect(p.id); setProjects((v) => [...v.filter(x => x.id !== p.id), p]); }} />
+      </Modal>
       <Dashboard project={selectedProject} projects={projects} sessions={sessions} setSessions={setSessions} sync={sync} onBroadcast={broadcastInput} />
     </div>
   );

@@ -34,6 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sessionsRouter = sessionsRouter;
+exports.shutdownAllSessions = shutdownAllSessions;
 const express_1 = require("express");
 const crypto_1 = require("crypto");
 const projects_1 = require("./projects");
@@ -234,4 +235,17 @@ function sessionsRouter({ wss }) {
         });
     });
     return r;
+}
+// Gracefully stop all live sessions (TERM → KILL after 3s)
+function shutdownAllSessions() {
+    for (const [id, live] of sessions.entries()) {
+        try {
+            live.proc.kill('SIGTERM');
+        }
+        catch { }
+        setTimeout(() => { try {
+            live.proc.kill('SIGKILL');
+        }
+        catch { } ; }, 3000);
+    }
 }

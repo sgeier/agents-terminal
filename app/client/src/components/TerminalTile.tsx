@@ -58,7 +58,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     const fitTimer: { id: number | null } = { id: null };
     const lastDims = { cols: 0, rows: 0 };
     const scheduleFit = () => {
-      if (fitTimer.id !== null) return;
+      if (fitTimer.id !== null) { clearTimeout(fitTimer.id); }
       fitTimer.id = window.setTimeout(() => {
         fitTimer.id = null;
         try {
@@ -69,7 +69,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
             api.resize(session.id, cols, rows).catch(() => {});
           }
         } catch {}
-      }, 60);
+      }, 120);
     };
     // initial fit after mount
     setTimeout(() => scheduleFit(), 30);

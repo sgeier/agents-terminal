@@ -13,6 +13,7 @@ const projects_1 = require("./api/projects");
 const sessions_1 = require("./api/sessions");
 const selftest_1 = require("./selftest");
 const log_1 = require("./core/log");
+const sessions_2 = require("./api/sessions");
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 const wss = new ws_1.WebSocketServer({ server });
@@ -74,6 +75,10 @@ function shutdown() {
         return;
     shuttingDown = true;
     log_2.logger.info('server.shutdown');
+    try {
+        (0, sessions_2.shutdownAllSessions)();
+    }
+    catch { }
     try {
         wss.close();
     }
