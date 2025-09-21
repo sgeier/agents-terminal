@@ -9,12 +9,30 @@ export function Projects({ onOpen }: { onOpen: (project: Project) => void }) {
   const [type, setType] = useState<'Shell' | 'Codex'>('Shell');
 
   useEffect(() => {
-    api.listProjects().then(setProjects).catch(() => {});
+    api.listProjects().then(async (list) => {
+      setProjects(list);
+      // Import from localStorage (persisted cwds)
+      const cwds: string[] = JSON.parse(localStorage.getItem('mt.cwds') || '[]');
+      const known = new Set(list.map((p) => p.cwd));
+      for (const c of cwds) {
+        if (!known.has(c)) {
+          try {
+            const p = await api.importProject(c);
+            setProjects((v) => [...v, p]);
+          } catch {}
+        }
+      }
+    }).catch(() => {});
   }, []);
 
   const create = async () => {
     const p = await api.createProject({ name, cwd, type });
     setProjects((v) => [...v, p]);
+    try {
+      const cwds: string[] = JSON.parse(localStorage.getItem('mt.cwds') || '[]');
+      if (!cwds.includes(cwd)) cwds.push(cwd);
+      localStorage.setItem('mt.cwds', JSON.stringify(cwds));
+    } catch {}
   };
 
   return (
@@ -37,11 +55,16 @@ export function Projects({ onOpen }: { onOpen: (project: Project) => void }) {
               <div style={{ color: '#6b7280' }}>{p.cwd}</div>
             </div>
             <button className="btn" onClick={() => onOpen(p)}>Open</button>
-            <button className="btn" onClick={() => api.deleteProject(p.id).then(() => setProjects((v) => v.filter((x) => x.id !== p.id)))}>Delete</button>
+            <button className="btn" onClick={() => api.deleteProject(p.id).then(() => {
+              setProjects((v) => v.filter((x) => x.id !== p.id));
+              try {
+                const cwds: string[] = JSON.parse(localStorage.getItem('mt.cwds') || '[]');
+                localStorage.setItem('mt.cwds', JSON.stringify(cwds.filter((c) => c !== p.cwd)));
+              } catch {}
+            })}>Delete</button>
           </div>
         ))}
       </div>
     </div>
   );
 }
-

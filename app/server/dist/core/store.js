@@ -76,5 +76,22 @@ function createStore() {
                 return false;
             }
         },
+        importByCwd(cwd) {
+            try {
+                const f = projectFile(cwd);
+                if (!fs_1.default.existsSync(f))
+                    return undefined;
+                const data = JSON.parse(fs_1.default.readFileSync(f, 'utf8'));
+                if (!data?.id)
+                    return undefined;
+                memory.set(data.id, data);
+                log_1.logger.info('project.import', { id: data.id, cwd: (0, log_1.sanitize)(cwd) });
+                return data;
+            }
+            catch (e) {
+                log_1.logger.warn('project.import.failed', { cwd: (0, log_1.sanitize)(cwd), err: String(e) });
+                return undefined;
+            }
+        },
     };
 }

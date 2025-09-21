@@ -13,6 +13,9 @@ export const api = {
   createProject: (body: Partial<Project>) => fetch(`${API_BASE}/api/projects`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
   }).then(json<Project>),
+  importProject: (cwd: string) => fetch(`${API_BASE}/api/projects/import`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cwd }),
+  }).then(json<Project>),
   updateProject: (id: string, patch: Partial<Project>) => fetch(`${API_BASE}/api/projects/${id}`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
   }).then(json<Project>),
@@ -39,4 +42,3 @@ export function wsUrl(path: string) {
   const base = API_BASE.replace(/^http/, 'ws');
   return base + path;
 }
-

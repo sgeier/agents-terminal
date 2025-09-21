@@ -11,6 +11,7 @@ export interface Store {
   remove(id: string): boolean;
   get(id: string): Project | undefined;
   isValidProjectDir(cwd: string): boolean;
+  importByCwd(cwd: string): Project | undefined;
 }
 
 const memory = new Map<string, Project>();
@@ -77,6 +78,19 @@ export function createStore(): Store {
         return false;
       }
     },
+    importByCwd(cwd: string) {
+      try {
+        const f = projectFile(cwd);
+        if (!fs.existsSync(f)) return undefined;
+        const data = JSON.parse(fs.readFileSync(f, 'utf8')) as Project;
+        if (!data?.id) return undefined;
+        memory.set(data.id, data);
+        logger.info('project.import', { id: data.id, cwd: sanitize(cwd) });
+        return data;
+      } catch (e) {
+        logger.warn('project.import.failed', { cwd: sanitize(cwd), err: String(e) });
+        return undefined;
+      }
+    },
   };
 }
-

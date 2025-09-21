@@ -33,6 +33,14 @@ export function projectsRouter() {
     res.status(201).json(created);
   });
 
+  r.post('/import', (req, res) => {
+    const { cwd } = req.body || {};
+    if (!cwd || typeof cwd !== 'string') return res.status(400).json({ error: 'cwd required' });
+    const proj = store.importByCwd(cwd);
+    if (!proj) return res.status(404).json({ error: 'not found' });
+    res.json(proj);
+  });
+
   r.patch('/:id', (req, res) => {
     const id = req.params.id;
     const updated = store.update(id, req.body || {});
@@ -50,4 +58,3 @@ export function projectsRouter() {
   logger.info('api.projects.ready');
   return r;
 }
-
