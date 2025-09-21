@@ -33,6 +33,11 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     const raw = localStorage.getItem(prefKey('span'));
     const n = raw ? Number(raw) : NaN; return Number.isFinite(n) ? Math.min(12, Math.max(3, n)) : 4; // 4/12 default ~ 3 per row
   });
+  const [renderer, setRenderer] = useState<'canvas' | 'webgl'>(() => {
+    const v = (localStorage.getItem(prefKey('renderer')) || 'canvas') as 'canvas' | 'webgl';
+    return v === 'webgl' ? 'webgl' : 'canvas';
+  });
+  const webglRef = useRef<WebglAddon | null>(null);
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains('dark');
@@ -50,7 +55,9 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
-    try { term.loadAddon(new WebglAddon()); } catch {}
+    if (renderer === 'webgl') {
+      try { const gl = new WebglAddon(); term.loadAddon(gl); webglRef.current = gl; } catch { webglRef.current = null; }
+    }
     termRef.current = term;
     fitRef.current = fit;
     if (ref.current) term.open(ref.current);
@@ -63,6 +70,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
         fitTimer.id = null;
         try {
           fit.fit();
+          term.refresh(0, term.rows - 1);
           const cols = term.cols, rows = term.rows;
           if (cols !== lastDims.cols || rows !== lastDims.rows) {
             lastDims.cols = cols; lastDims.rows = rows;
@@ -160,6 +168,28 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     try { localStorage.setItem(prefKey('span'), String(next)); } catch {}
   }
 
+  function toggleRenderer() {
+    const next = renderer === 'webgl' ? 'canvas' : 'webgl';
+    setRenderer(next);
+    try { localStorage.setItem(prefKey('renderer'), next); } catch {}
+    if (termRef.current) {
+      // Enable/disable WebGL at runtime
+      try {
+        if (next === 'webgl' && !webglRef.current) {
+          const gl = new WebglAddon();
+          termRef.current.loadAddon(gl);
+          webglRef.current = gl;
+        } else if (next === 'canvas' && webglRef.current) {
+          webglRef.current.dispose();
+          webglRef.current = null;
+        }
+      } catch {}
+      setTimeout(() => {
+        try { fitRef.current?.fit(); termRef.current!.refresh(0, termRef.current!.rows - 1); } catch {}
+      }, 20);
+    }
+  }
+
   function startWidthDrag(ev: React.PointerEvent) {
     ev.preventDefault();
     const wrap = wrapperRef.current!;
@@ -214,6 +244,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
           <button className="btn" title="Narrower" onClick={() => adjustSpan(-1)}>⬌−</button>
           <button className="btn" title="Wider" onClick={() => adjustSpan(+1)}>⬌+</button>
+          <button className="btn" title="Renderer" onClick={toggleRenderer}>{renderer === 'webgl' ? 'GL' : 'Canvas'}</button>
           <button className="btn" title="Font smaller" onClick={() => adjustFont(-1)}>A−</button>
           <button className="btn" title="Font larger" onClick={() => adjustFont(+1)}>A+</button>
           <button className="btn" onClick={() => { api.deleteSession(session.id).then(() => onClose(session.id)); }}>Close</button>

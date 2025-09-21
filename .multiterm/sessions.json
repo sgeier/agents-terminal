@@ -113,6 +113,26 @@
       "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
       "createdAt": "2025-09-21T15:50:30.821Z",
       "status": "running"
+    },
+    {
+      "id": "c2c998b2-fbb5-4850-b44c-6420224fff87",
+      "pid": 23995,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T17:29:01.164Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T17:30:36.108Z"
+    },
+    {
+      "id": "63a03ea3-40e1-4137-9cd0-8a5b76540f16",
+      "pid": 24702,
+      "command": [],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T17:30:51.139Z",
+      "status": "running"
     }
   ]
 }

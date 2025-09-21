@@ -25,10 +25,10 @@ Self-test: `curl 'http://localhost:3001/readyz?selftest=1'` → `{ ok: true, ...
   - Theme toggle: light/dark, persisted.
 - Tiles:
   - Header shows `project • command • pid` and status.
-  - Controls: width drag (right edge), height drag (bottom edge), corner drag for both; A− / A+ adjust font size; Close kills and removes.
+  - Controls: width drag (right edge), height drag (bottom edge), corner drag for both; Renderer toggle (Canvas/GL); A− / A+ adjust font size; Close kills and removes.
   - Footer shows connection state (Live / Polling / Reconnecting / Closed) and PTY info.
 - Backlog first, then live stream. Automatic WS reconnect with 500 ms polling fallback.
-  - Resizing: we throttle fit+resize to avoid duplicate redraws. Some full‑screen TUI apps redraw on SIGWINCH and may print spacer lines; this is expected.
+  - Resizing: we debounce fit+resize to avoid duplicate redraws and force a viewport refresh after fit. Some full‑screen TUI apps redraw on SIGWINCH and may print spacer lines; this is expected. If you see artifacts, switch Renderer to Canvas.
   - Optional Sync: toggle in top bar. When on, your keystrokes in any terminal mirror to all other open terminals (best effort via REST input fallback).
 
 ## Persistence
