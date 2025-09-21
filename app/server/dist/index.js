@@ -65,3 +65,23 @@ setInterval(() => {
         catch { }
     }
 }, 10000);
+const log_2 = require("./core/log");
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+let shuttingDown = false;
+function shutdown() {
+    if (shuttingDown)
+        return;
+    shuttingDown = true;
+    log_2.logger.info('server.shutdown');
+    try {
+        wss.close();
+    }
+    catch { }
+    try {
+        server.close();
+    }
+    catch { }
+    // Close after a short delay to allow session exit handlers to run
+    setTimeout(() => process.exit(0), 1000);
+}

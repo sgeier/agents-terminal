@@ -1,8 +1,8 @@
 {
-  "id": "66559bb4-d8c7-4e57-98bf-cd3c07c30467",
-  "createdAt": "2025-09-21T12:30:34.835Z",
-  "updatedAt": "2025-09-21T12:30:34.835Z",
-  "name": "demo",
+  "id": "0647eb63-3760-4e44-8095-7b79158a7f8b",
+  "createdAt": "2025-09-21T12:55:07.890Z",
+  "updatedAt": "2025-09-21T12:55:07.890Z",
+  "name": "Agent Terminal 3",
   "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
   "type": "Codex",
   "autostart": false

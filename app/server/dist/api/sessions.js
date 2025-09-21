@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sessionsRouter = sessionsRouter;
 const express_1 = require("express");
@@ -7,6 +40,7 @@ const projects_1 = require("./projects");
 const bus_1 = require("../core/bus");
 const pty_1 = require("../core/pty");
 const log_1 = require("../core/log");
+const tracker = __importStar(require("../core/tracker"));
 const security_1 = require("../core/security");
 const sessions = new Map();
 function nowIso() { return new Date().toISOString(); }
@@ -66,6 +100,7 @@ function sessionsRouter({ wss }) {
         };
         sessions.set(id, live);
         log_1.logger.info('session.spawn', { id, cwd: (0, log_1.sanitize)(pcwd), pty: proc.pty });
+        tracker.recordStart({ id, pid: proc.pid, command: argv || [], cwd: pcwd, createdAt: meta.createdAt });
         proc.onData((d) => {
             const frame = bus.push(d);
             live.meta.scrollbackLines = bus.lineCount();
@@ -79,6 +114,7 @@ function sessionsRouter({ wss }) {
             live.meta.exitedAt = nowIso();
             live.meta.exitCode = code;
             log_1.logger.info('session.exit', { id, code });
+            tracker.recordExit(pcwd, id, code);
         });
         res.status(201).json(meta);
     });
@@ -117,6 +153,13 @@ function sessionsRouter({ wss }) {
         catch { }
         sessions.delete(id);
         res.json({ ok: true });
+    });
+    // List tracked sessions across known projects (running/exited)
+    r.get('/opened/all', (req, res) => {
+        const store = (0, projects_1.getStore)();
+        const cwds = store.list().map((p) => p.cwd);
+        const items = tracker.listTracked(cwds);
+        res.json({ sessions: items });
     });
     r.post('/:id/resize', (req, res) => {
         const live = sessions.get(req.params.id);

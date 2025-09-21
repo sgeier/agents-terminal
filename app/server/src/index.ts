@@ -63,3 +63,19 @@ setInterval(() => {
     try { (client as any).ping?.(); } catch {}
   }
 }, 10_000);
+
+// Graceful shutdown: try to stop all live sessions
+import { setImmediate as defer } from 'timers';
+import { logger as _log } from './core/log';
+import { } from './api/sessions';
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+let shuttingDown = false;
+function shutdown() {
+  if (shuttingDown) return; shuttingDown = true;
+  _log.info('server.shutdown');
+  try { wss.close(); } catch {}
+  try { server.close(); } catch {}
+  // Close after a short delay to allow session exit handlers to run
+  setTimeout(() => process.exit(0), 1000);
+}

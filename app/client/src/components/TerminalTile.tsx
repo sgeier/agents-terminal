@@ -19,10 +19,17 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
   const streamRef = useRef<ReturnType<typeof createStream> | null>(null);
 
   useEffect(() => {
+    const isDark = document.documentElement.classList.contains('dark');
     const term = new Terminal({
       convertEol: true,
       fontFamily: 'Menlo, Monaco, Consolas, ui-monospace, monospace',
       scrollback: 5000,
+      theme: isDark ? {
+        background: '#0b1220',
+        foreground: '#e5e7eb',
+        cursor: '#22d3ee',
+        selection: '#1f2937'
+      } : undefined,
     });
     const fit = new FitAddon();
     term.loadAddon(fit);

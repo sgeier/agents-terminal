@@ -6,6 +6,7 @@ import { TerminalSession, OutputFrame, InputChunk } from '../types/domain';
 import { createSessionBus } from '../core/bus';
 import { spawnProcess } from '../core/pty';
 import { logger, sanitize } from '../core/log';
+import * as tracker from '../core/tracker';
 import { validateProjectCwd, isValidArgv } from '../core/security';
 
 interface LiveSession {
@@ -83,6 +84,7 @@ export function sessionsRouter({ wss }: SessionsRouterOptions) {
     };
     sessions.set(id, live);
     logger.info('session.spawn', { id, cwd: sanitize(pcwd), pty: proc.pty });
+    tracker.recordStart({ id, pid: proc.pid, command: argv || [], cwd: pcwd, createdAt: meta.createdAt });
 
     proc.onData((d) => {
       const frame = bus.push(d);
@@ -96,6 +98,7 @@ export function sessionsRouter({ wss }: SessionsRouterOptions) {
       live.meta.exitedAt = nowIso();
       live.meta.exitCode = code;
       logger.info('session.exit', { id, code });
+      tracker.recordExit(pcwd, id, code);
     });
 
     res.status(201).json(meta);
@@ -127,6 +130,14 @@ export function sessionsRouter({ wss }: SessionsRouterOptions) {
     try { live.proc.kill('SIGKILL'); } catch {}
     sessions.delete(id);
     res.json({ ok: true });
+  });
+
+  // List tracked sessions across known projects (running/exited)
+  r.get('/opened/all', (req, res) => {
+    const store = getStore();
+    const cwds = store.list().map((p) => p.cwd);
+    const items = tracker.listTracked(cwds);
+    res.json({ sessions: items });
   });
 
   r.post('/:id/resize', (req, res) => {
@@ -195,4 +206,3 @@ export function sessionsRouter({ wss }: SessionsRouterOptions) {
 
   return r;
 }
-
