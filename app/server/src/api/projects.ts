@@ -1,7 +1,10 @@
 import { Router } from 'express';
+import { spawn } from 'child_process';
+import os from 'os';
 import { createStore } from '../core/store';
 import { Project } from '../types/domain';
 import { logger, sanitize } from '../core/log';
+import { validateProjectCwd } from '../core/security';
 
 // A singleton store for this process
 const store = createStore();
@@ -39,6 +42,36 @@ export function projectsRouter() {
     const proj = store.importByCwd(cwd);
     if (!proj) return res.status(404).json({ error: 'not found' });
     res.json(proj);
+  });
+
+  // Open the project directory in Cursor editor (macOS preferred)
+  r.post('/:id/open-cursor', (req, res) => {
+    const id = req.params.id;
+    const proj = store.get(id);
+    if (!proj) return res.status(404).json({ error: 'not found' });
+    if (!validateProjectCwd(store, proj.cwd)) return res.status(400).json({ error: 'invalid project cwd' });
+
+    const cwd = proj.cwd;
+    try {
+      const platform = os.platform();
+      let child;
+      if (platform === 'darwin') {
+        // Best-effort: use macOS open with Cursor app
+        child = spawn('open', ['-a', 'Cursor', cwd], { stdio: 'ignore', detached: true });
+      } else {
+        // Fallback: try "cursor" CLI if present
+        child = spawn('cursor', [cwd], { stdio: 'ignore', detached: true });
+      }
+      child.on('error', (e) => {
+        logger.warn('cursor.open.failed', { id, cwd: sanitize(cwd), err: String(e) });
+      });
+      try { child.unref(); } catch {}
+      logger.info('cursor.open', { id, cwd: sanitize(cwd) });
+      return res.json({ ok: true });
+    } catch (e) {
+      logger.warn('cursor.open.exception', { id, cwd: sanitize(proj.cwd), err: String(e) });
+      return res.status(500).json({ error: 'failed to launch cursor' });
+    }
   });
 
   r.patch('/:id', (req, res) => {

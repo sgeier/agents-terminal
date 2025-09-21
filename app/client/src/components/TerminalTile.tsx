@@ -14,11 +14,14 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
   const ref = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
+  const [focused, setFocused] = useState(false);
   const [conn, setConn] = useState<ConnState>('Reconnecting');
   const [status, setStatus] = useState<string>(session.status);
   const [outstanding, setOutstanding] = useState(0);
   const seqRef = useRef(0);
   const streamRef = useRef<ReturnType<typeof createStream> | null>(null);
+  const inputQueueRef = useRef<Uint8Array[]>([]);
+  const inputTimerRef = useRef<number | null>(null);
   const projectId = project?.id || session.projectId;
   const prefKey = useMemo(() => (k: string) => `mt.${projectId}.${k}`, [projectId]);
   const [fontSize, setFontSize] = useState<number>(() => {
@@ -55,6 +58,15 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     termRef.current = term;
     fitRef.current = fit;
     if (ref.current) term.open(ref.current);
+    // focus/blur visual state
+    // xterm v5 no longer exposes onFocus/onBlur; rely on DOM focus events instead
+    const onFocusIn = () => setFocused(true);
+    const onFocusOut = () => setFocused(false);
+    if (ref.current) {
+      // use capture so the hidden textarea inside xterm triggers these
+      ref.current.addEventListener('focusin', onFocusIn);
+      ref.current.addEventListener('focusout', onFocusOut);
+    }
 
     const fitTimer: { id: number | null } = { id: null };
     const lastDims = { cols: 0, rows: 0 };
@@ -140,23 +152,58 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('focus', onVisibility);
 
-    term.onData((d) => {
-      // chunk to 32KB, maintain client seq
-      const enc = new TextEncoder();
-      const bytes = enc.encode(d);
-      const chunkSize = 32 * 1024;
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        const slice = bytes.slice(i, i + chunkSize);
-        const chunk: InputChunk = { sessionId: session.id, seq: ++seqRef.current, dataBase64: btoa(String.fromCharCode(...slice)) };
+    const flushInput = () => {
+      inputTimerRef.current = null;
+      const chunks = inputQueueRef.current;
+      if (!chunks.length) return;
+      let total = 0; for (const c of chunks) total += c.length;
+      const merged = new Uint8Array(total);
+      let off = 0; for (const c of chunks) { merged.set(c, off); off += c.length; }
+      inputQueueRef.current = [];
+      const max = 32 * 1024;
+      for (let i = 0; i < merged.length; i += max) {
+        const slice = merged.slice(i, i + max);
+        const b64 = btoa(String.fromCharCode(...slice));
+        const chunk: InputChunk = { sessionId: session.id, seq: ++seqRef.current, dataBase64: b64 };
         streamRef.current?.send(chunk);
         if (sync) onBroadcast(session.id, slice);
+      }
+    };
+
+    term.onData((d) => {
+      const enc = new TextEncoder();
+      inputQueueRef.current.push(enc.encode(d));
+      if (inputTimerRef.current == null) {
+        inputTimerRef.current = window.setTimeout(flushInput, 16);
       }
     });
 
     return () => {
       mounted = false;
       streamRef.current?.close();
+      // flush any pending input to avoid loss
+      try { if (inputTimerRef.current != null) { clearTimeout(inputTimerRef.current); (inputTimerRef.current as any) = null; } } catch {}
+      try {
+        const chunks = inputQueueRef.current; inputQueueRef.current = [];
+        if (chunks.length) {
+          let total = 0; for (const c of chunks) total += c.length;
+          const merged = new Uint8Array(total); let off = 0; for (const c of chunks) { merged.set(c, off); off += c.length; }
+          const max = 32 * 1024;
+          for (let i = 0; i < merged.length; i += max) {
+            const slice = merged.slice(i, i + max);
+            const b64 = btoa(String.fromCharCode(...slice));
+            const chunk: InputChunk = { sessionId: session.id, seq: ++seqRef.current, dataBase64: b64 };
+            streamRef.current?.send(chunk);
+          }
+        }
+      } catch {}
       term.dispose();
+      try {
+        if (ref.current) {
+          ref.current.removeEventListener('focusin', onFocusIn);
+          ref.current.removeEventListener('focusout', onFocusOut);
+        }
+      } catch {}
       window.removeEventListener('resize', onWinResize);
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('focus', onVisibility);
@@ -259,7 +306,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
   }
 
   return (
-    <div className="tile" ref={wrapperRef} style={{ gridColumn: `span ${span} / span ${span}` }}>
+    <div className={`tile ${focused ? 'active' : ''}`} ref={wrapperRef} style={{ gridColumn: `span ${span} / span ${span}` }}>
       <div className="tile-h">
         <strong style={{ marginRight: 8 }}>{headerTitle}</strong>
         <span>• {status}{session.exitCode !== undefined ? ` (${session.exitCode})` : ''}</span>
@@ -269,10 +316,13 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
           
           <button className="btn" title="Font smaller" onClick={() => adjustFont(-1)}>A−</button>
           <button className="btn" title="Font larger" onClick={() => adjustFont(+1)}>A+</button>
+          {project && (
+            <button className="btn" title="Open in Cursor" onClick={() => { api.openProjectInCursor(project.id).catch(() => {}); }}>Cursor</button>
+          )}
           <button className="btn" onClick={() => { api.deleteSession(session.id).then(() => onClose(session.id)); }}>Close</button>
         </div>
       </div>
-      <div className="term" ref={ref} style={{ height: termHeight, flex: 'unset' }} />
+      <div className="term" ref={ref} style={{ height: termHeight, flex: 'unset' }} onMouseDown={() => termRef.current?.focus()} />
       <div className="resize-handle r" onPointerDown={startWidthDrag} />
       <div className="resize-handle b" onPointerDown={startHeightDrag} />
       <div className="resize-handle br" onPointerDown={(e) => { startWidthDrag(e); startHeightDrag(e); }} />

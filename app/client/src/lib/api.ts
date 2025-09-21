@@ -20,6 +20,7 @@ export const api = {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
   }).then(json<Project>),
   deleteProject: (id: string) => fetch(`${API_BASE}/api/projects/${id}`, { method: 'DELETE' }).then(json<{ ok: boolean }>),
+  openProjectInCursor: (id: string) => fetch(`${API_BASE}/api/projects/${id}/open-cursor`, { method: 'POST' }).then(json<{ ok: boolean }>),
 
   // Sessions
   listSessions: () => fetch(`${API_BASE}/api/sessions`).then(json<TerminalSession[]>),

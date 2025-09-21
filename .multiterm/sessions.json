@@ -154,6 +154,100 @@
       ],
       "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
       "createdAt": "2025-09-21T17:55:22.980Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T18:08:09.525Z"
+    },
+    {
+      "id": "cc4450f5-4490-4fe3-ab7b-d33885f87834",
+      "pid": 82977,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T20:29:38.712Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T20:33:03.450Z"
+    },
+    {
+      "id": "59597834-8e0e-41c8-89fe-79269cbb59e7",
+      "pid": 83214,
+      "command": [],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T20:29:48.258Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T20:30:03.196Z"
+    },
+    {
+      "id": "77c3343b-fdb0-455e-9920-b6e7c2084e04",
+      "pid": 1987,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T20:41:37.688Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T20:51:00.622Z"
+    },
+    {
+      "id": "ed2ec6f6-b068-4aef-a5f0-8827e2164370",
+      "pid": 3300,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T20:51:17.351Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T20:56:58.901Z"
+    },
+    {
+      "id": "0c09c4de-8e70-4ef5-a555-f7f389c8e850",
+      "pid": 4555,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T21:11:13.478Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T21:12:55.828Z"
+    },
+    {
+      "id": "54d9b5ad-7aee-493d-b8e2-f78e2e4fcab1",
+      "pid": 4851,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T21:13:23.264Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T21:26:22.871Z"
+    },
+    {
+      "id": "b9d97341-28cd-4504-b1d8-698af95944fe",
+      "pid": 7760,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T21:33:41.923Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T21:50:53.537Z"
+    },
+    {
+      "id": "ecf734fe-fff5-4dbc-8d7e-30c0559562f6",
+      "pid": 9837,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T21:51:16.945Z",
       "status": "running"
     }
   ]

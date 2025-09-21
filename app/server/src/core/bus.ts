@@ -1,7 +1,7 @@
 import { WebSocket } from 'ws';
 import { OutputFrame } from '../types/domain';
 import { logger } from './log';
-import { metrics } from './metrics';
+// metrics removed
 
 interface SessionBus {
   addSubscriber(ws: WebSocket, fromSeq?: number): void;
@@ -29,7 +29,7 @@ export function createSessionBus(sessionId: string): SessionBus {
       dropped += count;
       if (lines < 0) lines = 0;
     }
-    if (dropped > 0) metrics.addDroppedLines(dropped);
+    // drop count recorded locally only
   }
 
   function broadcast(frame: OutputFrame) {
@@ -64,7 +64,7 @@ export function createSessionBus(sessionId: string): SessionBus {
       const dataUtf8 = data.toString('utf8');
       const lineInc = (dataUtf8.match(/\n/g) || []).length || 1;
       lines += lineInc;
-      try { metrics.addOutputBytes(Buffer.byteLength(data)); } catch {}
+      // track sizes locally if needed
       const frame: OutputFrame = {
         sessionId,
         seq: ++seq,

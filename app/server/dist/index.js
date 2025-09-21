@@ -12,7 +12,6 @@ const ws_1 = require("ws");
 const projects_1 = require("./api/projects");
 const sessions_1 = require("./api/sessions");
 const selftest_1 = require("./selftest");
-const metrics_1 = require("./api/metrics");
 const log_1 = require("./core/log");
 const sessions_2 = require("./api/sessions");
 const app = (0, express_1.default)();
@@ -45,7 +44,7 @@ app.options('*', (0, cors_1.default)(corsOpts));
 // Routers
 app.use('/api/projects', (0, projects_1.projectsRouter)());
 app.use('/api/sessions', (0, sessions_1.sessionsRouter)({ wss }));
-app.use('/api', (0, metrics_1.metricsRouter)());
+// metrics router removed
 app.use('/', (0, selftest_1.selftestRouter)());
 // Serve built client if present
 const clientDist = path_1.default.resolve(__dirname, '../../client/dist');

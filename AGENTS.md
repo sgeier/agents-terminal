@@ -158,3 +158,18 @@ A local web app to spawn and interact with multiple terminal sessions per projec
 - Keep diffs focused; update docs and UI strings when changing endpoints.
 - Prefer adding small, well‑named helpers in `core/*` to keep API routes small.
 - Follow Conventional Commits and the repo conventions above.
+
+## Voice Updates (After Each Agent Turn)
+- Default: play a brief TTS summary after every agent turn presented to the user.
+- Voice: `nova` (TTS model `gpt-4o-mini-tts`, format `mp3`).
+- Content: 1–2 sentences summarizing what was done and what’s next; keep it concise.
+- Opt‑out: set `VOICE_UPDATES=off` or when `CI` is set; do not run TTS in tests.
+- Fallback: if TTS is unavailable, skip silently; never block or delay text output.
+- Privacy: never read secrets, tokens, or long logs aloud; keep summaries high‑level.
+- Errors: speak a short neutral summary (e.g., “Error while running tests; check logs”).
+
+Implementation hint (pseudo‑code):
+```
+if (process.env.CI || process.env.VOICE_UPDATES === 'off') return;
+voice.speak({ text: summary, voice: 'nova', model: 'gpt-4o-mini-tts', format: 'mp3' }).catch(() => {});
+```

@@ -104,11 +104,11 @@ export default function App() {
               ))}
             </select>
           </span>
-          <button className="btn" onClick={() => setShowProjects(true)}>Projects…</button>
-        </div>
-        <div className="right">
           <button className="btn" onClick={spawnCodex}>Spawn</button>
           <button className="btn" onClick={spawnShell}>New Terminal</button>
+        </div>
+        <div className="right">
+          <button className="btn" onClick={() => setShowProjects(true)}>Projects…</button>
           <button className="btn" onClick={() => { const v = !sync; setSync(v); localStorage.setItem('mt.sync', v ? '1' : '0'); }}>Sync: {sync ? 'On' : 'Off'}</button>
           <button className="btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? '☀️' : '🌙'}</button>
         </div>

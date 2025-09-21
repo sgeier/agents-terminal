@@ -43,7 +43,6 @@ const pty_1 = require("../core/pty");
 const log_1 = require("../core/log");
 const tracker = __importStar(require("../core/tracker"));
 const security_1 = require("../core/security");
-const metrics_1 = require("../core/metrics");
 const sessions = new Map();
 function nowIso() { return new Date().toISOString(); }
 // Simple token-bucket style input rate limit: 1 MB/s per session
@@ -102,25 +101,12 @@ function sessionsRouter({ wss }) {
         };
         sessions.set(id, live);
         log_1.logger.info('session.spawn', { id, cwd: (0, log_1.sanitize)(pcwd), pty: proc.pty });
-        try {
-            metrics_1.metrics.incSpawn(proc.pty);
-        }
-        catch { }
         tracker.recordStart({ id, pid: proc.pid, command: argv || [], cwd: pcwd, createdAt: meta.createdAt });
         proc.onData((d) => {
             const frame = bus.push(d);
             live.meta.scrollbackLines = bus.lineCount();
             if (live.meta.status === 'starting') {
                 live.meta.status = 'running';
-                try {
-                    metrics_1.metrics.onRunningTransition();
-                }
-                catch { }
-                try {
-                    const firstMs = Date.now() - new Date(live.meta.createdAt).getTime();
-                    metrics_1.metrics.onFirstOutput(firstMs);
-                }
-                catch { }
             }
             // never log raw data, only sizes
             const bytes = Buffer.byteLength(d);
@@ -131,10 +117,6 @@ function sessionsRouter({ wss }) {
             live.meta.exitedAt = nowIso();
             live.meta.exitCode = code;
             log_1.logger.info('session.exit', { id, code });
-            try {
-                metrics_1.metrics.onExit(code);
-            }
-            catch { }
             tracker.recordExit(pcwd, id, code);
         });
         res.status(201).json(meta);
@@ -218,10 +200,6 @@ function sessionsRouter({ wss }) {
             return res.status(429).json({ error: 'rate limited' });
         live.proc.write(data);
         log_1.logger.debug('io.input', { id: live.meta.id, bytes: data.length });
-        try {
-            metrics_1.metrics.addInputBytes(data.length);
-        }
-        catch { }
         res.json({ ok: true });
     });
     // Attach WS handling on the passed WebSocketServer
@@ -239,10 +217,6 @@ function sessionsRouter({ wss }) {
         const fromSeq = from ? Number(from) : undefined;
         live.bus.addSubscriber(ws, fromSeq);
         log_1.logger.info('ws.connect', { sessionId: id });
-        try {
-            metrics_1.metrics.wsConnect();
-        }
-        catch { }
         ws.on('message', (msg) => {
             // treat as InputChunk frames
             try {
@@ -260,10 +234,6 @@ function sessionsRouter({ wss }) {
         ws.on('close', () => {
             live.bus.removeSubscriber(ws);
             log_1.logger.info('ws.disconnect', { sessionId: id });
-            try {
-                metrics_1.metrics.wsDisconnect();
-            }
-            catch { }
         });
     });
     return r;
