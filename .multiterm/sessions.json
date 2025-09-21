@@ -28,7 +28,9 @@
       "command": [],
       "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
       "createdAt": "2025-09-21T13:18:50.302Z",
-      "status": "running"
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T13:20:52.836Z"
     },
     {
       "id": "3af4db90-d6e5-4203-8e40-5b003fac5195",

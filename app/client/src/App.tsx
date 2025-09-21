@@ -22,7 +22,7 @@ export default function App() {
     const root = document.documentElement;
     if (theme === 'dark') root.classList.add('dark'); else root.classList.remove('dark');
     localStorage.setItem('mt.theme', theme);
-  }, []);
+  }, [theme]);
 
   function onSelect(id: string) {
     setSelectedId(id);

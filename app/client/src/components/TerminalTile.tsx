@@ -14,6 +14,7 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const [conn, setConn] = useState<ConnState>('Reconnecting');
+  const [status, setStatus] = useState<string>(session.status);
   const [outstanding, setOutstanding] = useState(0);
   const seqRef = useRef(0);
   const streamRef = useRef<ReturnType<typeof createStream> | null>(null);
@@ -61,6 +62,7 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       const data = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
       term.write(data);
+      if (status !== 'running') setStatus('running');
     }
 
     // Backlog then live
@@ -137,13 +139,12 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
     <div className="tile" style={{ gridColumn: `span ${span} / span ${span}` }}>
       <div className="tile-h">
         <strong style={{ marginRight: 8 }}>{headerTitle}</strong>
-        <span>• {session.status}{session.exitCode !== undefined ? ` (${session.exitCode})` : ''}</span>
+        <span>• {status}{session.exitCode !== undefined ? ` (${session.exitCode})` : ''}</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
           <button className="btn" title="Narrower" onClick={() => adjustSpan(-1)}>⬌−</button>
           <button className="btn" title="Wider" onClick={() => adjustSpan(+1)}>⬌+</button>
           <button className="btn" title="Font smaller" onClick={() => adjustFont(-1)}>A−</button>
           <button className="btn" title="Font larger" onClick={() => adjustFont(+1)}>A+</button>
-          <button className="btn" onClick={() => api.stopSession(session.id)}>Stop</button>
           <button className="btn" onClick={() => { api.deleteSession(session.id).then(() => onClose(session.id)); }}>Close</button>
         </div>
       </div>
