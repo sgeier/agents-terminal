@@ -18,6 +18,20 @@ export default function App() {
     api.listSessions().then(setSessions).catch(() => {});
   }, []);
 
+  // Periodically refresh session metadata to reflect exits quickly
+  useEffect(() => {
+    const t = setInterval(() => {
+      api.listSessions().then((list) => {
+        setSessions((prev) => {
+          const map = new Map(prev.map((s) => [s.id, s]));
+          for (const s of list) map.set(s.id, { ...(map.get(s.id) || s), ...s });
+          return [...map.values()].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+        });
+      }).catch(() => {});
+    }, 2000);
+    return () => clearInterval(t);
+  }, []);
+
   useEffect(() => {
     const root = document.documentElement;
     if (theme === 'dark') root.classList.add('dark'); else root.classList.remove('dark');

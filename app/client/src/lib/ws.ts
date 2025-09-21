@@ -1,7 +1,7 @@
 import type { OutputFrame, InputChunk } from '@/types/domain';
 import { api, wsUrl } from './api';
 
-export type ConnState = 'Live' | 'Polling' | 'Reconnecting';
+export type ConnState = 'Live' | 'Polling' | 'Reconnecting' | 'Closed';
 
 export interface StreamClient {
   state: ConnState;
@@ -13,7 +13,7 @@ export interface StreamClient {
 export function createStream(
   sessionId: string,
   onFrame: (f: OutputFrame) => void,
-  opts?: { from?: number; onState?: (s: ConnState) => void },
+  opts?: { from?: number; onState?: (s: ConnState) => void; onGone?: () => void },
 ): StreamClient {
   let state: ConnState = 'Reconnecting';
   let lastSeq = opts?.from ?? 0;
@@ -26,10 +26,21 @@ export function createStream(
     state = s; opts?.onState?.(state);
   };
 
+  async function checkExists() {
+    try { await api.getSession(sessionId); return true; } catch { return false; }
+  }
+
   function startPolling() {
     setState('Polling');
     const run = async () => {
       try {
+        const exists = await checkExists();
+        if (!exists) {
+          setState('Closed');
+          opts?.onGone?.();
+          stopPolling();
+          return;
+        }
         const { frames } = await api.scrollback(sessionId, lastSeq);
         for (const f of frames) { lastSeq = f.seq; onFrame(f); }
       } catch {}
@@ -58,9 +69,14 @@ export function createStream(
       if (!openedSeenFirst) openedSeenFirst = true;
       if (f.seq > lastSeq) { lastSeq = f.seq; onFrame(f); }
     };
-    ws.onclose = () => {
-      setState('Reconnecting');
+    ws.onclose = (ev) => {
       stopPolling();
+      if (ev.code === 1008 || String(ev.reason).includes('no such session')) {
+        setState('Closed');
+        opts?.onGone?.();
+        return;
+      }
+      setState('Reconnecting');
       setTimeout(connect, Math.min(5000, Date.now() - openedAt < 200 ? 1000 : 2000));
     };
     ws.onerror = () => {
@@ -83,4 +99,3 @@ export function createStream(
     close: () => { try { ws?.close(); } catch {}; stopPolling(); },
   };
 }
-

@@ -70,9 +70,9 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
     api.scrollback(session.id, 0).then(({ to, frames }) => {
       if (!mounted) return;
       for (const f of frames) onFrame(f);
-      const stream = createStream(session.id, onFrame, { from: to, onState: setConn });
+      const stream = createStream(session.id, onFrame, { from: to, onState: setConn, onGone: () => setStatus('exited') });
       streamRef.current = stream;
-    });
+    }).catch(() => { setConn('Closed'); setStatus('exited'); });
 
     const ro = new ResizeObserver(() => {
       fit.fit();
@@ -107,13 +107,15 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
     };
   }, [session.id]);
 
+  useEffect(() => { setStatus(session.status); }, [session.status]);
+
   useEffect(() => {
     if (termRef.current && fitRef.current) {
       setTimeout(() => { fitRef.current!.fit(); api.resize(session.id, termRef.current!.cols, termRef.current!.rows).catch(() => {}); }, 10);
     }
   }, [span]);
 
-  const footerState = conn === 'Live' ? 'live' : conn === 'Polling' ? 'polling' : 'reconnecting';
+  const footerState = conn === 'Live' ? 'live' : conn === 'Polling' ? 'polling' : conn === 'Closed' ? 'closed' : 'reconnecting';
 
   const labelCmd = session.command?.[0] ? session.command[0] : 'shell';
   const headerTitle = `${project?.name || session.cwd.split('/').pop()} • ${labelCmd} • pid ${session.pid ?? '—'}`;
