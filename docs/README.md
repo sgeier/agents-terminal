@@ -28,6 +28,7 @@ Self-test: `curl 'http://localhost:3001/readyz?selftest=1'` → `{ ok: true, ...
   - Controls: width drag (right edge), height drag (bottom edge), corner drag for both; A− / A+ adjust font size; Close kills and removes.
   - Footer shows connection state (Live / Polling / Reconnecting / Closed) and PTY info.
   - Backlog first, then live stream. Automatic WS reconnect with 500 ms polling fallback.
+  - Optional Sync: toggle in top bar. When on, your keystrokes in any terminal mirror to all other open terminals (best effort via REST input fallback).
 
 ## Persistence
 
@@ -35,7 +36,7 @@ Self-test: `curl 'http://localhost:3001/readyz?selftest=1'` → `{ ok: true, ...
   - `.multiterm/project.json` — project metadata.
   - `.multiterm/sessions.json` — tracked sessions (id, pid, command, status, timestamps).
 - Per browser (localStorage):
-  - `mt.selectedProjectId`, `mt.theme` — UI prefs.
+  - `mt.selectedProjectId`, `mt.theme`, `mt.sync` — UI prefs.
   - `mt.cwds` — known project directories to auto-import.
   - `mt.<projectId>.fontSize`, `mt.<projectId>.termHeight`, `mt.<projectId>.span` — per-project terminal preferences.
 
@@ -84,4 +85,3 @@ Self-test: `curl 'http://localhost:3001/readyz?selftest=1'` → `{ ok: true, ...
 - `make setup` — install server and client deps.
 - `make run-server`, `make run-ui` — dev servers.
 - `make build` — builds server TS and client assets; server will serve client from `app/client/dist`.
-

@@ -10,9 +10,33 @@ export default function App() {
   const [showProjects, setShowProjects] = useState(false);
   const [sessions, setSessions] = useState<TerminalSession[]>([]);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => (localStorage.getItem('mt.theme') as any) || 'dark');
+  const [sync, setSync] = useState<boolean>(() => localStorage.getItem('mt.sync') === '1');
+  const seqBySessionRef = useState<Map<string, number>>(new Map())[0];
 
   useEffect(() => {
-    api.listProjects().then(setProjects).catch(() => {});
+    async function loadProjects() {
+      try {
+        let list = await api.listProjects();
+        // Import from localStorage at startup so select is populated even after server restarts
+        try {
+          const cwds: string[] = JSON.parse(localStorage.getItem('mt.cwds') || '[]');
+          const known = new Set(list.map((p) => p.cwd));
+          const imports: Project[] = [];
+          for (const c of cwds) {
+            if (!known.has(c)) {
+              try { imports.push(await api.importProject(c)); } catch {}
+            }
+          }
+          if (imports.length) list = [...list, ...imports];
+        } catch {}
+        // Dedupe by id
+        const map = new Map<string, Project>(list.map((p) => [p.id, p]));
+        const merged = [...map.values()];
+        setProjects(merged);
+        if (!selectedId && merged.length) setSelectedId(merged[0].id);
+      } catch {}
+    }
+    loadProjects();
     const saved = localStorage.getItem('mt.selectedProjectId');
     if (saved) setSelectedId(saved);
     api.listSessions().then(setSessions).catch(() => {});
@@ -55,6 +79,17 @@ export default function App() {
     setSessions((v) => [s, ...v].slice(0, 12));
   }
 
+  async function broadcastInput(fromId: string, bytes: Uint8Array) {
+    if (!sync) return;
+    const targets = sessions.filter((s) => s.id !== fromId);
+    const b64 = btoa(String.fromCharCode(...bytes));
+    await Promise.all(targets.map((t) => {
+      const seq = (seqBySessionRef.get(t.id) || 0) + 1;
+      seqBySessionRef.set(t.id, seq);
+      return api.input(t.id, { sessionId: t.id, seq, dataBase64: b64 });
+    })).catch(() => {});
+  }
+
   return (
     <div>
       <div className="header">
@@ -71,6 +106,7 @@ export default function App() {
         <div className="right">
           <button className="btn" onClick={spawnCodex}>Spawn</button>
           <button className="btn" onClick={spawnShell}>New Terminal</button>
+          <button className="btn" onClick={() => { const v = !sync; setSync(v); localStorage.setItem('mt.sync', v ? '1' : '0'); }}>Sync: {sync ? 'On' : 'Off'}</button>
           <button className="btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? '☀️' : '🌙'}</button>
         </div>
       </div>
@@ -79,7 +115,7 @@ export default function App() {
           <Projects onOpen={(p) => { setShowProjects(false); onSelect(p.id); setProjects((v) => [...v.filter(x => x.id !== p.id), p]); }} />
         </div>
       )}
-      <Dashboard project={selectedProject} projects={projects} sessions={sessions} setSessions={setSessions} />
+      <Dashboard project={selectedProject} projects={projects} sessions={sessions} setSessions={setSessions} sync={sync} onBroadcast={broadcastInput} />
     </div>
   );
 }

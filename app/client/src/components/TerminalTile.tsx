@@ -9,7 +9,7 @@ import { createStream, ConnState } from '@/lib/ws';
 
 import type { Project } from '@/types/domain';
 
-export function TerminalTile({ session, project, onClose }: { session: TerminalSession; project: Project | null; onClose: (id: string) => void }) {
+export function TerminalTile({ session, project, onClose, sync, onBroadcast }: { session: TerminalSession; project: Project | null; onClose: (id: string) => void; sync: boolean; onBroadcast: (fromId: string, bytes: Uint8Array) => void }) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -98,6 +98,7 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
         const slice = bytes.slice(i, i + chunkSize);
         const chunk: InputChunk = { sessionId: session.id, seq: ++seqRef.current, dataBase64: btoa(String.fromCharCode(...slice)) };
         streamRef.current?.send(chunk);
+        if (sync) onBroadcast(session.id, slice);
       }
     });
 

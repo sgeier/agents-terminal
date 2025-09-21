@@ -9,20 +9,7 @@ export function Projects({ onOpen }: { onOpen: (project: Project) => void }) {
   const [type, setType] = useState<'Shell' | 'Codex'>('Shell');
 
   useEffect(() => {
-    api.listProjects().then(async (list) => {
-      setProjects(list);
-      // Import from localStorage (persisted cwds)
-      const cwds: string[] = JSON.parse(localStorage.getItem('mt.cwds') || '[]');
-      const known = new Set(list.map((p) => p.cwd));
-      for (const c of cwds) {
-        if (!known.has(c)) {
-          try {
-            const p = await api.importProject(c);
-            setProjects((v) => [...v, p]);
-          } catch {}
-        }
-      }
-    }).catch(() => {});
+    api.listProjects().then(setProjects).catch(() => {});
   }, []);
 
   const create = async () => {
