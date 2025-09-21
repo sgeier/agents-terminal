@@ -8,7 +8,7 @@ import { spawnProcess } from '../core/pty';
 import { logger, sanitize } from '../core/log';
 import * as tracker from '../core/tracker';
 import { validateProjectCwd, isValidArgv } from '../core/security';
-import { metrics } from '../core/metrics';
+// metrics removed
 
 interface LiveSession {
   meta: TerminalSession;
@@ -85,7 +85,7 @@ export function sessionsRouter({ wss }: SessionsRouterOptions) {
     };
     sessions.set(id, live);
     logger.info('session.spawn', { id, cwd: sanitize(pcwd), pty: proc.pty });
-    try { metrics.incSpawn(proc.pty); } catch {}
+    
     tracker.recordStart({ id, pid: proc.pid, command: argv || [], cwd: pcwd, createdAt: meta.createdAt });
 
     proc.onData((d) => {
@@ -93,11 +93,6 @@ export function sessionsRouter({ wss }: SessionsRouterOptions) {
       live.meta.scrollbackLines = bus.lineCount();
       if (live.meta.status === 'starting') {
         live.meta.status = 'running';
-        try { metrics.onRunningTransition(); } catch {}
-        try {
-          const firstMs = Date.now() - new Date(live.meta.createdAt).getTime();
-          metrics.onFirstOutput(firstMs);
-        } catch {}
       }
       // never log raw data, only sizes
       const bytes = Buffer.byteLength(d);
@@ -108,7 +103,7 @@ export function sessionsRouter({ wss }: SessionsRouterOptions) {
       live.meta.exitedAt = nowIso();
       live.meta.exitCode = code;
       logger.info('session.exit', { id, code });
-      try { metrics.onExit(code); } catch {}
+      
       tracker.recordExit(pcwd, id, code);
     });
 
@@ -180,7 +175,7 @@ export function sessionsRouter({ wss }: SessionsRouterOptions) {
     if (!allowBytes(live, data.length)) return res.status(429).json({ error: 'rate limited' });
     live.proc.write(data);
     logger.debug('io.input', { id: live.meta.id, bytes: data.length });
-    try { metrics.addInputBytes(data.length); } catch {}
+    
     res.json({ ok: true });
   });
 
@@ -198,7 +193,7 @@ export function sessionsRouter({ wss }: SessionsRouterOptions) {
     const fromSeq = from ? Number(from) : undefined;
     live.bus.addSubscriber(ws, fromSeq);
     logger.info('ws.connect', { sessionId: id });
-    try { metrics.wsConnect(); } catch {}
+    
 
     ws.on('message', (msg) => {
       // treat as InputChunk frames
@@ -214,7 +209,7 @@ export function sessionsRouter({ wss }: SessionsRouterOptions) {
     ws.on('close', () => {
       live.bus.removeSubscriber(ws);
       logger.info('ws.disconnect', { sessionId: id });
-      try { metrics.wsDisconnect(); } catch {}
+      
     });
   });
 

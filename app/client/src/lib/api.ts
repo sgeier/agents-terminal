@@ -1,4 +1,4 @@
-import type { Project, TerminalSession, OutputFrame, InputChunk, MetricsSummary } from '@/types/domain';
+import type { Project, TerminalSession, OutputFrame, InputChunk } from '@/types/domain';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
 
@@ -37,8 +37,7 @@ export const api = {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(chunk),
   }).then(json<{ ok: boolean }>),
 
-  // Metrics
-  metricsSummary: () => fetch(`${API_BASE}/api/metrics-summary`).then(json<MetricsSummary>),
+  // Metrics removed
 };
 
 export function wsUrl(path: string) {

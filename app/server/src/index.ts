@@ -7,7 +7,6 @@ import { WebSocketServer } from 'ws';
 import { projectsRouter } from './api/projects';
 import { sessionsRouter } from './api/sessions';
 import { selftestRouter } from './selftest';
-import { metricsRouter } from './api/metrics';
 import { logger } from './core/log';
 import { shutdownAllSessions } from './api/sessions';
 
@@ -43,7 +42,7 @@ app.options('*', cors(corsOpts));
 // Routers
 app.use('/api/projects', projectsRouter());
 app.use('/api/sessions', sessionsRouter({ wss }));
-app.use('/api', metricsRouter());
+// metrics router removed
 app.use('/', selftestRouter());
 
 // Serve built client if present

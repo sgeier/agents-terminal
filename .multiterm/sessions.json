@@ -145,6 +145,16 @@
       "status": "exited",
       "exitCode": 0,
       "exitedAt": "2025-09-21T17:53:10.519Z"
+    },
+    {
+      "id": "3365e287-0d69-49e7-aac5-767386548906",
+      "pid": 37430,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T17:55:22.980Z",
+      "status": "running"
     }
   ]
 }

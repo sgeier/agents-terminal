@@ -30,15 +30,4 @@ export interface OutputFrame { sessionId: string; seq: number; ts: number; dataB
 export interface InputChunk  { sessionId: string; seq: number; dataBase64: string; isFinal?: boolean; }
 
 // Metrics summary returned by /api/metrics-summary
-export interface MetricsSummary {
-  sessions: {
-    running: number;
-    starting: number;
-    exited: number;
-    spawns: { total: number; pty: number; stdio: number };
-    exits: { total: number; withError: number };
-    firstOutputMs: { count: number; avg: number; min: number; max: number };
-  };
-  io: { outputBytes: number; inputBytes: number; ringbufferLinesDropped: number };
-  ws: { connections: number; connectTotal: number; disconnectTotal: number };
-}
+// no client metrics types
