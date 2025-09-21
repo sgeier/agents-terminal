@@ -34,13 +34,18 @@
       .tile-h { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--fg); }
       .tile-f { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
       .term { flex: 1; }
+      .tile { position: relative; }
+      .resize-handle { position: absolute; background: transparent; }
+      .resize-handle.r { top: 0; right: -4px; width: 8px; height: 100%; cursor: ew-resize; }
+      .resize-handle.b { bottom: -4px; left: 0; height: 8px; width: 100%; cursor: ns-resize; }
+      .resize-handle.br { right: -4px; bottom: -4px; width: 12px; height: 12px; cursor: nwse-resize; }
       .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
       .live { background: #10b981; }
       .polling { background: #f59e0b; }
       .reconnecting { background: #ef4444; }
       .closed { background: #6b7280; }
     </style>
-    <script type="module" crossorigin src="/assets/index-ep7iL3Ls.js"></script>
+    <script type="module" crossorigin src="/assets/index-C6YpgDFB.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-Beg8tuEN.css">
   </head>
   <body>

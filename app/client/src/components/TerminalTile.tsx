@@ -10,6 +10,7 @@ import { createStream, ConnState } from '@/lib/ws';
 import type { Project } from '@/types/domain';
 
 export function TerminalTile({ session, project, onClose }: { session: TerminalSession; project: Project | null; onClose: (id: string) => void }) {
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
@@ -137,8 +138,54 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
     try { localStorage.setItem(prefKey('span'), String(next)); } catch {}
   }
 
+  function startWidthDrag(ev: React.PointerEvent) {
+    ev.preventDefault();
+    const wrap = wrapperRef.current!;
+    const parent = wrap.parentElement as HTMLElement;
+    const startX = ev.clientX;
+    const startWidth = wrap.getBoundingClientRect().width;
+    const gridW = parent.getBoundingClientRect().width;
+    const colW = gridW / 12;
+    function onMove(e: PointerEvent) {
+      const dx = e.clientX - startX;
+      const w = Math.max(colW * 3, Math.min(gridW, startWidth + dx));
+      const newSpan = Math.max(3, Math.min(12, Math.round(w / colW)));
+      if (newSpan !== span) {
+        setSpan(newSpan);
+        try { localStorage.setItem(prefKey('span'), String(newSpan)); } catch {}
+      }
+    }
+    function onUp() {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    }
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
+  function startHeightDrag(ev: React.PointerEvent) {
+    ev.preventDefault();
+    const startY = ev.clientY;
+    const startH = termHeight;
+    function onMove(e: PointerEvent) {
+      const dy = e.clientY - startY;
+      const h = Math.max(180, Math.min(window.innerHeight - 160, startH + dy));
+      setTermHeight(h);
+      try { localStorage.setItem(prefKey('termHeight'), String(h)); } catch {}
+      if (termRef.current && fitRef.current) {
+        setTimeout(() => { fitRef.current!.fit(); api.resize(session.id, termRef.current!.cols, termRef.current!.rows).catch(() => {}); }, 10);
+      }
+    }
+    function onUp() {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    }
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
   return (
-    <div className="tile" style={{ gridColumn: `span ${span} / span ${span}` }}>
+    <div className="tile" ref={wrapperRef} style={{ gridColumn: `span ${span} / span ${span}` }}>
       <div className="tile-h">
         <strong style={{ marginRight: 8 }}>{headerTitle}</strong>
         <span>• {status}{session.exitCode !== undefined ? ` (${session.exitCode})` : ''}</span>
@@ -150,7 +197,10 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
           <button className="btn" onClick={() => { api.deleteSession(session.id).then(() => onClose(session.id)); }}>Close</button>
         </div>
       </div>
-      <div className="term" ref={ref} style={{ height: termHeight, resize: 'vertical', overflow: 'auto', flex: 'unset' }} />
+      <div className="term" ref={ref} style={{ height: termHeight, overflow: 'auto', flex: 'unset' }} />
+      <div className="resize-handle r" onPointerDown={startWidthDrag} />
+      <div className="resize-handle b" onPointerDown={startHeightDrag} />
+      <div className="resize-handle br" onPointerDown={(e) => { startWidthDrag(e); startHeightDrag(e); }} />
       <div className="tile-f">
         <span><span className={`status-dot ${footerState}`}></span> {conn}</span>
         <span>Scrollback ≤ 5000 • PTY: {session.pty ? 'yes' : 'no'}</span>
