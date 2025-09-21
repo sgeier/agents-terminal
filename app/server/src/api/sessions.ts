@@ -206,3 +206,11 @@ export function sessionsRouter({ wss }: SessionsRouterOptions) {
 
   return r;
 }
+
+// Gracefully stop all live sessions (TERM → KILL after 3s)
+export function shutdownAllSessions() {
+  for (const [id, live] of sessions.entries()) {
+    try { live.proc.kill('SIGTERM'); } catch {}
+    setTimeout(() => { try { live.proc.kill('SIGKILL'); } catch {}; }, 3000);
+  }
+}

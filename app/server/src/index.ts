@@ -8,6 +8,7 @@ import { projectsRouter } from './api/projects';
 import { sessionsRouter } from './api/sessions';
 import { selftestRouter } from './selftest';
 import { logger } from './core/log';
+import { shutdownAllSessions } from './api/sessions';
 
 const app = express();
 const server = http.createServer(app);
@@ -74,6 +75,7 @@ let shuttingDown = false;
 function shutdown() {
   if (shuttingDown) return; shuttingDown = true;
   _log.info('server.shutdown');
+  try { shutdownAllSessions(); } catch {}
   try { wss.close(); } catch {}
   try { server.close(); } catch {}
   // Close after a short delay to allow session exit handlers to run
