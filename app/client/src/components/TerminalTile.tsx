@@ -38,6 +38,10 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     return v === 'webgl' ? 'webgl' : 'canvas';
   });
   const webglRef = useRef<WebglAddon | null>(null);
+  const [deferResize, setDeferResize] = useState<boolean>(() => {
+    const v = localStorage.getItem(prefKey('deferResize'));
+    return v === null ? true : v === '1';
+  });
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains('dark');
@@ -72,7 +76,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
           fit.fit();
           term.refresh(0, term.rows - 1);
           const cols = term.cols, rows = term.rows;
-          if (cols !== lastDims.cols || rows !== lastDims.rows) {
+          if (!deferResize && (cols !== lastDims.cols || rows !== lastDims.rows)) {
             lastDims.cols = cols; lastDims.rows = rows;
             api.resize(session.id, cols, rows).catch(() => {});
           }
@@ -112,7 +116,25 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
       }
     });
     if (ref.current) ro.observe(ref.current);
-    window.addEventListener('resize', scheduleFit);
+    let finalizeTimer: number | null = null;
+    const onWinResize = () => {
+      scheduleFit();
+      if (deferResize) {
+        if (finalizeTimer) window.clearTimeout(finalizeTimer);
+        finalizeTimer = window.setTimeout(() => {
+          try {
+            fit.fit();
+            term.refresh(0, term.rows - 1);
+            const cols = term.cols, rows = term.rows;
+            if (cols !== lastDims.cols || rows !== lastDims.rows) {
+              lastDims.cols = cols; lastDims.rows = rows;
+              api.resize(session.id, cols, rows).catch(() => {});
+            }
+          } catch {}
+        }, 220) as any;
+      }
+    };
+    window.addEventListener('resize', onWinResize);
 
     term.onData((d) => {
       // chunk to 32KB, maintain client seq
@@ -131,7 +153,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
       mounted = false;
       streamRef.current?.close();
       term.dispose();
-      window.removeEventListener('resize', scheduleFit);
+      window.removeEventListener('resize', onWinResize);
     };
   }, [session.id]);
 
@@ -190,6 +212,11 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     }
   }
 
+  function toggleDeferResize() {
+    const next = !deferResize; setDeferResize(next);
+    try { localStorage.setItem(prefKey('deferResize'), next ? '1' : '0'); } catch {}
+  }
+
   function startWidthDrag(ev: React.PointerEvent) {
     ev.preventDefault();
     const wrap = wrapperRef.current!;
@@ -210,6 +237,13 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     function onUp() {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      if (deferResize && fitRef.current && termRef.current) {
+        try {
+          fitRef.current.fit();
+          const cols = termRef.current.cols, rows = termRef.current.rows;
+          api.resize(session.id, cols, rows).catch(() => {});
+        } catch {}
+      }
     }
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -231,6 +265,13 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     function onUp() {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      if (deferResize && fitRef.current && termRef.current) {
+        try {
+          fitRef.current.fit();
+          const cols = termRef.current.cols, rows = termRef.current.rows;
+          api.resize(session.id, cols, rows).catch(() => {});
+        } catch {}
+      }
     }
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -245,6 +286,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
           <button className="btn" title="Narrower" onClick={() => adjustSpan(-1)}>⬌−</button>
           <button className="btn" title="Wider" onClick={() => adjustSpan(+1)}>⬌+</button>
           <button className="btn" title="Renderer" onClick={toggleRenderer}>{renderer === 'webgl' ? 'GL' : 'Canvas'}</button>
+          <button className="btn" title="Resize mode" onClick={toggleDeferResize}>{deferResize ? 'Defer' : 'Live'}</button>
           <button className="btn" title="Font smaller" onClick={() => adjustFont(-1)}>A−</button>
           <button className="btn" title="Font larger" onClick={() => adjustFont(+1)}>A+</button>
           <button className="btn" onClick={() => { api.deleteSession(session.id).then(() => onClose(session.id)); }}>Close</button>

@@ -28,7 +28,7 @@ Self-test: `curl 'http://localhost:3001/readyz?selftest=1'` → `{ ok: true, ...
   - Controls: width drag (right edge), height drag (bottom edge), corner drag for both; Renderer toggle (Canvas/GL); A− / A+ adjust font size; Close kills and removes.
   - Footer shows connection state (Live / Polling / Reconnecting / Closed) and PTY info.
 - Backlog first, then live stream. Automatic WS reconnect with 500 ms polling fallback.
-  - Resizing: we debounce fit+resize to avoid duplicate redraws and force a viewport refresh after fit. Some full‑screen TUI apps redraw on SIGWINCH and may print spacer lines; this is expected. If you see artifacts, switch Renderer to Canvas.
+  - Resizing: we debounce fit; and you can switch the Resize mode (Defer vs Live). Defer sends the PTY resize only when you finish dragging or window resizing, which avoids repeated app redraws. We also refresh the viewport after fit. If artifacts persist, try Canvas renderer.
   - Optional Sync: toggle in top bar. When on, your keystrokes in any terminal mirror to all other open terminals (best effort via REST input fallback).
 
 ## Persistence
