@@ -1,0 +1,9 @@
+{
+  "id": "66559bb4-d8c7-4e57-98bf-cd3c07c30467",
+  "createdAt": "2025-09-21T12:30:34.835Z",
+  "updatedAt": "2025-09-21T12:30:34.835Z",
+  "name": "demo",
+  "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+  "type": "Codex",
+  "autostart": false
+}

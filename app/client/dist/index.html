@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MultiTerm</title>
+    <style>
+      body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+      .header { display: flex; gap: 12px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #e5e7eb; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 8px; }
+      @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+      @media (max-width: 680px) { .grid { grid-template-columns: 1fr; } }
+      .btn { padding: 6px 10px; border: 1px solid #e5e7eb; border-radius: 6px; background: white; cursor: pointer; }
+      .btn:hover { background: #f8fafc; }
+      .tile { border: 1px solid #e5e7eb; border-radius: 6px; display: flex; flex-direction: column; min-height: 240px; }
+      .tile-h { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-bottom: 1px solid #e5e7eb; font-size: 12px; color: #111827; }
+      .tile-f { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280; }
+      .term { flex: 1; }
+      .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+      .live { background: #10b981; }
+      .polling { background: #f59e0b; }
+      .reconnecting { background: #ef4444; }
+    </style>
+    <script type="module" crossorigin src="/assets/index-D0eSWoNn.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-Beg8tuEN.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+  </html>
+
