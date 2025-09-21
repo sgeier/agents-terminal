@@ -59,6 +59,50 @@
       "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
       "createdAt": "2025-09-21T13:28:21.477Z",
       "status": "running"
+    },
+    {
+      "id": "8886be1b-a576-4d39-b62c-fdbf89c3279c",
+      "pid": 53342,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T13:37:07.707Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T13:39:35.019Z"
+    },
+    {
+      "id": "69a6854e-0334-4fc2-9e5f-ea5408cb302a",
+      "pid": 53551,
+      "command": [],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T13:37:12.117Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T15:31:08.535Z"
+    },
+    {
+      "id": "db730b94-9bb9-446f-9db6-40b2a116f5d5",
+      "pid": 86648,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T15:30:59.522Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T15:41:00.188Z"
+    },
+    {
+      "id": "d77c6cd2-b8ec-4292-b5b3-f473c46c0f66",
+      "pid": 90633,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T15:42:37.977Z",
+      "status": "running"
     }
   ]
 }

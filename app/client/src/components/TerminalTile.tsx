@@ -56,6 +56,19 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     if (ref.current) term.open(ref.current);
     setTimeout(() => fit.fit(), 50);
 
+    const fitTimer: { id: number | null } = { id: null };
+    const scheduleFit = () => {
+      if (fitTimer.id !== null) return;
+      fitTimer.id = window.setTimeout(() => {
+        fitTimer.id = null;
+        try {
+          fit.fit();
+          const cols = term.cols, rows = term.rows;
+          api.resize(session.id, cols, rows).catch(() => {});
+        } catch {}
+      }, 60);
+    };
+
     function onFrame(f: OutputFrame) {
       // Decode base64 in browser without Node Buffer
       const bin = atob(f.dataBase64);
@@ -76,9 +89,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     }).catch(() => { setConn('Closed'); setStatus('exited'); });
 
     const ro = new ResizeObserver(() => {
-      fit.fit();
-      const cols = term.cols, rows = term.rows;
-      api.resize(session.id, cols, rows).catch(() => {});
+      scheduleFit();
       if (ref.current) {
         const h = ref.current.clientHeight;
         if (Math.abs(h - termHeight) > 2) {
@@ -113,7 +124,13 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
 
   useEffect(() => {
     if (termRef.current && fitRef.current) {
-      setTimeout(() => { fitRef.current!.fit(); api.resize(session.id, termRef.current!.cols, termRef.current!.rows).catch(() => {}); }, 10);
+      const fit = () => {
+        try {
+          fitRef.current!.fit();
+          api.resize(session.id, termRef.current!.cols, termRef.current!.rows).catch(() => {});
+        } catch {}
+      };
+      setTimeout(fit, 10);
     }
   }, [span]);
 
@@ -174,7 +191,10 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
       setTermHeight(h);
       try { localStorage.setItem(prefKey('termHeight'), String(h)); } catch {}
       if (termRef.current && fitRef.current) {
-        setTimeout(() => { fitRef.current!.fit(); api.resize(session.id, termRef.current!.cols, termRef.current!.rows).catch(() => {}); }, 10);
+        try {
+          fitRef.current!.fit();
+          api.resize(session.id, termRef.current!.cols, termRef.current!.rows).catch(() => {});
+        } catch {}
       }
     }
     function onUp() {
@@ -198,7 +218,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
           <button className="btn" onClick={() => { api.deleteSession(session.id).then(() => onClose(session.id)); }}>Close</button>
         </div>
       </div>
-      <div className="term" ref={ref} style={{ height: termHeight, overflow: 'auto', flex: 'unset' }} />
+      <div className="term" ref={ref} style={{ height: termHeight, flex: 'unset' }} />
       <div className="resize-handle r" onPointerDown={startWidthDrag} />
       <div className="resize-handle b" onPointerDown={startHeightDrag} />
       <div className="resize-handle br" onPointerDown={(e) => { startWidthDrag(e); startHeightDrag(e); }} />
