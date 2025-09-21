@@ -27,6 +27,10 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
     const raw = localStorage.getItem(prefKey('termHeight'));
     const n = raw ? Number(raw) : NaN; return Number.isFinite(n) ? n : 320;
   });
+  const [span, setSpan] = useState<number>(() => {
+    const raw = localStorage.getItem(prefKey('span'));
+    const n = raw ? Number(raw) : NaN; return Number.isFinite(n) ? Math.min(12, Math.max(3, n)) : 4; // 4/12 default ~ 3 per row
+  });
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains('dark');
@@ -101,6 +105,12 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
     };
   }, [session.id]);
 
+  useEffect(() => {
+    if (termRef.current && fitRef.current) {
+      setTimeout(() => { fitRef.current!.fit(); api.resize(session.id, termRef.current!.cols, termRef.current!.rows).catch(() => {}); }, 10);
+    }
+  }, [span]);
+
   const footerState = conn === 'Live' ? 'live' : conn === 'Polling' ? 'polling' : 'reconnecting';
 
   const labelCmd = session.command?.[0] ? session.command[0] : 'shell';
@@ -117,12 +127,20 @@ export function TerminalTile({ session, project, onClose }: { session: TerminalS
     }
   }
 
+  function adjustSpan(delta: number) {
+    const next = Math.min(12, Math.max(3, span + delta));
+    setSpan(next);
+    try { localStorage.setItem(prefKey('span'), String(next)); } catch {}
+  }
+
   return (
-    <div className="tile">
+    <div className="tile" style={{ gridColumn: `span ${span} / span ${span}` }}>
       <div className="tile-h">
         <strong style={{ marginRight: 8 }}>{headerTitle}</strong>
         <span>• {session.status}{session.exitCode !== undefined ? ` (${session.exitCode})` : ''}</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button className="btn" title="Narrower" onClick={() => adjustSpan(-1)}>⬌−</button>
+          <button className="btn" title="Wider" onClick={() => adjustSpan(+1)}>⬌+</button>
           <button className="btn" title="Font smaller" onClick={() => adjustFont(-1)}>A−</button>
           <button className="btn" title="Font larger" onClick={() => adjustFont(+1)}>A+</button>
           <button className="btn" onClick={() => api.stopSession(session.id)}>Stop</button>
