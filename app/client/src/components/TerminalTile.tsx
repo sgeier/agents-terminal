@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import { WebglAddon } from '@xterm/addon-webgl';
+// WebGL renderer disabled for robustness
 import 'xterm/css/xterm.css';
 import type { TerminalSession, OutputFrame, InputChunk } from '@/types/domain';
 import { api } from '@/lib/api';
@@ -33,15 +33,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     const raw = localStorage.getItem(prefKey('span'));
     const n = raw ? Number(raw) : NaN; return Number.isFinite(n) ? Math.min(12, Math.max(3, n)) : 4; // 4/12 default ~ 3 per row
   });
-  const [renderer, setRenderer] = useState<'canvas' | 'webgl'>(() => {
-    const v = (localStorage.getItem(prefKey('renderer')) || 'canvas') as 'canvas' | 'webgl';
-    return v === 'webgl' ? 'webgl' : 'canvas';
-  });
-  const webglRef = useRef<WebglAddon | null>(null);
-  const [deferResize, setDeferResize] = useState<boolean>(() => {
-    const v = localStorage.getItem(prefKey('deferResize'));
-    return v === null ? true : v === '1';
-  });
+  // Renderer and resize strategy are fixed (Canvas + deferred PTY resize)
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains('dark');
@@ -59,9 +51,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
-    if (renderer === 'webgl') {
-      try { const gl = new WebglAddon(); term.loadAddon(gl); webglRef.current = gl; } catch { webglRef.current = null; }
-    }
+    // WebGL disabled
     termRef.current = term;
     fitRef.current = fit;
     if (ref.current) term.open(ref.current);
@@ -76,23 +66,36 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
           fit.fit();
           term.refresh(0, term.rows - 1);
           const cols = term.cols, rows = term.rows;
-          if (!deferResize && (cols !== lastDims.cols || rows !== lastDims.rows)) {
-            lastDims.cols = cols; lastDims.rows = rows;
-            api.resize(session.id, cols, rows).catch(() => {});
-          }
+          // record target size; defer PTY resize until settle
+          lastDims.cols = cols; lastDims.rows = rows;
         } catch {}
       }, 120);
     };
     // initial fit after mount
     setTimeout(() => scheduleFit(), 30);
 
+    // rAF write queue for stable paints
+    const writeQueue: Uint8Array[] = [];
+    let raf: number | null = null;
+    const flush = () => {
+      raf = null;
+      try {
+        while (writeQueue.length) {
+          const chunk = writeQueue.shift()!;
+          (term as any).writeUtf8 ? (term as any).writeUtf8(chunk) : term.write(new TextDecoder().decode(chunk));
+        }
+      } catch {}
+    };
     function onFrame(f: OutputFrame) {
-      // Decode base64 in browser without Node Buffer
       const bin = atob(f.dataBase64);
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      const data = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-      term.write(data);
+      writeQueue.push(bytes);
+      if (raf == null) {
+        raf = ('requestAnimationFrame' in window)
+          ? window.requestAnimationFrame(flush)
+          : window.setTimeout(flush, 16) as unknown as number;
+      }
       if (status !== 'running') setStatus('running');
     }
 
@@ -119,22 +122,23 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     let finalizeTimer: number | null = null;
     const onWinResize = () => {
       scheduleFit();
-      if (deferResize) {
-        if (finalizeTimer) window.clearTimeout(finalizeTimer);
-        finalizeTimer = window.setTimeout(() => {
-          try {
-            fit.fit();
-            term.refresh(0, term.rows - 1);
-            const cols = term.cols, rows = term.rows;
-            if (cols !== lastDims.cols || rows !== lastDims.rows) {
-              lastDims.cols = cols; lastDims.rows = rows;
-              api.resize(session.id, cols, rows).catch(() => {});
-            }
-          } catch {}
-        }, 220) as any;
-      }
+      if (finalizeTimer) window.clearTimeout(finalizeTimer);
+      finalizeTimer = window.setTimeout(() => {
+        try {
+          fit.fit();
+          term.refresh(0, term.rows - 1);
+          const cols = term.cols, rows = term.rows;
+          if (cols !== lastDims.cols || rows !== lastDims.rows) {
+            lastDims.cols = cols; lastDims.rows = rows;
+            api.resize(session.id, cols, rows).catch(() => {});
+          }
+        } catch {}
+      }, 220) as any;
     };
     window.addEventListener('resize', onWinResize);
+    const onVisibility = () => { try { term.refresh(0, term.rows - 1); } catch {} };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', onVisibility);
 
     term.onData((d) => {
       // chunk to 32KB, maintain client seq
@@ -154,6 +158,8 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
       streamRef.current?.close();
       term.dispose();
       window.removeEventListener('resize', onWinResize);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', onVisibility);
     };
   }, [session.id]);
 
@@ -190,32 +196,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     try { localStorage.setItem(prefKey('span'), String(next)); } catch {}
   }
 
-  function toggleRenderer() {
-    const next = renderer === 'webgl' ? 'canvas' : 'webgl';
-    setRenderer(next);
-    try { localStorage.setItem(prefKey('renderer'), next); } catch {}
-    if (termRef.current) {
-      // Enable/disable WebGL at runtime
-      try {
-        if (next === 'webgl' && !webglRef.current) {
-          const gl = new WebglAddon();
-          termRef.current.loadAddon(gl);
-          webglRef.current = gl;
-        } else if (next === 'canvas' && webglRef.current) {
-          webglRef.current.dispose();
-          webglRef.current = null;
-        }
-      } catch {}
-      setTimeout(() => {
-        try { fitRef.current?.fit(); termRef.current!.refresh(0, termRef.current!.rows - 1); } catch {}
-      }, 20);
-    }
-  }
-
-  function toggleDeferResize() {
-    const next = !deferResize; setDeferResize(next);
-    try { localStorage.setItem(prefKey('deferResize'), next ? '1' : '0'); } catch {}
-  }
+  // Renderer/resize mode are fixed: Canvas + deferred PTY resize
 
   function startWidthDrag(ev: React.PointerEvent) {
     ev.preventDefault();
@@ -237,7 +218,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     function onUp() {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
-      if (deferResize && fitRef.current && termRef.current) {
+      if (fitRef.current && termRef.current) {
         try {
           fitRef.current.fit();
           const cols = termRef.current.cols, rows = termRef.current.rows;
@@ -265,7 +246,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     function onUp() {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
-      if (deferResize && fitRef.current && termRef.current) {
+      if (fitRef.current && termRef.current) {
         try {
           fitRef.current.fit();
           const cols = termRef.current.cols, rows = termRef.current.rows;
@@ -285,8 +266,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
           <button className="btn" title="Narrower" onClick={() => adjustSpan(-1)}>⬌−</button>
           <button className="btn" title="Wider" onClick={() => adjustSpan(+1)}>⬌+</button>
-          <button className="btn" title="Renderer" onClick={toggleRenderer}>{renderer === 'webgl' ? 'GL' : 'Canvas'}</button>
-          <button className="btn" title="Resize mode" onClick={toggleDeferResize}>{deferResize ? 'Defer' : 'Live'}</button>
+          
           <button className="btn" title="Font smaller" onClick={() => adjustFont(-1)}>A−</button>
           <button className="btn" title="Font larger" onClick={() => adjustFont(+1)}>A+</button>
           <button className="btn" onClick={() => { api.deleteSession(session.id).then(() => onClose(session.id)); }}>Close</button>

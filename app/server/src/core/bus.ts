@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws';
 import { OutputFrame } from '../types/domain';
 import { logger } from './log';
+import { metrics } from './metrics';
 
 interface SessionBus {
   addSubscriber(ws: WebSocket, fromSeq?: number): void;
@@ -19,13 +20,16 @@ export function createSessionBus(sessionId: string): SessionBus {
 
   function dropOverflow() {
     // Keep ≤5000 lines by dropping old frames
+    let dropped = 0;
     while (lines > 5000 && frames.length > 0) {
       const old = frames.shift();
       const data = old ? Buffer.from(old.dataBase64, 'base64').toString('utf8') : '';
       const count = (data.match(/\n/g) || []).length || 1;
       lines -= count;
+      dropped += count;
       if (lines < 0) lines = 0;
     }
+    if (dropped > 0) metrics.addDroppedLines(dropped);
   }
 
   function broadcast(frame: OutputFrame) {
@@ -60,6 +64,7 @@ export function createSessionBus(sessionId: string): SessionBus {
       const dataUtf8 = data.toString('utf8');
       const lineInc = (dataUtf8.match(/\n/g) || []).length || 1;
       lines += lineInc;
+      try { metrics.addOutputBytes(Buffer.byteLength(data)); } catch {}
       const frame: OutputFrame = {
         sessionId,
         seq: ++seq,
@@ -82,4 +87,3 @@ export function createSessionBus(sessionId: string): SessionBus {
     },
   };
 }
-

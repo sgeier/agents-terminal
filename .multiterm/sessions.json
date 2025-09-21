@@ -133,6 +133,18 @@
       "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
       "createdAt": "2025-09-21T17:30:51.139Z",
       "status": "running"
+    },
+    {
+      "id": "a3eafe71-5a3a-4a4a-800e-79e0bc3c74ba",
+      "pid": 28621,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T17:40:07.202Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T17:53:10.519Z"
     }
   ]
 }
