@@ -80,6 +80,10 @@ Self-test: `curl 'http://localhost:3001/readyz?selftest=1'` → `{ ok: true, ...
 - Performance targets: first output ≤ 1.5s, keystroke echo ≤ 150 ms (local), 9+ concurrent terminals.
 - Security: validate `cwd` to known projects; no shell-string commands (argv only); structured logs; single-origin CORS.
 
+### Known caveats
+
+- Sync broadcast is experimental and may introduce visible typing lag when many terminals are open. If you hit latency, toggle Sync off. Planned: 50–100 ms batching, WS fan‑out, and backpressure.
+
 ## Development
 
 - `make setup` — install server and client deps.
