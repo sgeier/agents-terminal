@@ -27,7 +27,8 @@ Self-test: `curl 'http://localhost:3001/readyz?selftest=1'` → `{ ok: true, ...
   - Header shows `project • command • pid` and status.
   - Controls: width drag (right edge), height drag (bottom edge), corner drag for both; A− / A+ adjust font size; Close kills and removes.
   - Footer shows connection state (Live / Polling / Reconnecting / Closed) and PTY info.
-  - Backlog first, then live stream. Automatic WS reconnect with 500 ms polling fallback.
+- Backlog first, then live stream. Automatic WS reconnect with 500 ms polling fallback.
+  - Resizing: we throttle fit+resize to avoid duplicate redraws. Some full‑screen TUI apps redraw on SIGWINCH and may print spacer lines; this is expected.
   - Optional Sync: toggle in top bar. When on, your keystrokes in any terminal mirror to all other open terminals (best effort via REST input fallback).
 
 ## Persistence

@@ -54,9 +54,9 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     termRef.current = term;
     fitRef.current = fit;
     if (ref.current) term.open(ref.current);
-    setTimeout(() => fit.fit(), 50);
 
     const fitTimer: { id: number | null } = { id: null };
+    const lastDims = { cols: 0, rows: 0 };
     const scheduleFit = () => {
       if (fitTimer.id !== null) return;
       fitTimer.id = window.setTimeout(() => {
@@ -64,10 +64,15 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
         try {
           fit.fit();
           const cols = term.cols, rows = term.rows;
-          api.resize(session.id, cols, rows).catch(() => {});
+          if (cols !== lastDims.cols || rows !== lastDims.rows) {
+            lastDims.cols = cols; lastDims.rows = rows;
+            api.resize(session.id, cols, rows).catch(() => {});
+          }
         } catch {}
       }, 60);
     };
+    // initial fit after mount
+    setTimeout(() => scheduleFit(), 30);
 
     function onFrame(f: OutputFrame) {
       // Decode base64 in browser without Node Buffer
@@ -99,6 +104,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
       }
     });
     if (ref.current) ro.observe(ref.current);
+    window.addEventListener('resize', scheduleFit);
 
     term.onData((d) => {
       // chunk to 32KB, maintain client seq
@@ -117,6 +123,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
       mounted = false;
       streamRef.current?.close();
       term.dispose();
+      window.removeEventListener('resize', scheduleFit);
     };
   }, [session.id]);
 
@@ -124,13 +131,10 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
 
   useEffect(() => {
     if (termRef.current && fitRef.current) {
-      const fit = () => {
-        try {
-          fitRef.current!.fit();
-          api.resize(session.id, termRef.current!.cols, termRef.current!.rows).catch(() => {});
-        } catch {}
-      };
-      setTimeout(fit, 10);
+      // call scheduleFit via a small timeout by triggering resize observer path
+      setTimeout(() => {
+        try { fitRef.current!.fit(); } catch {}
+      }, 10);
     }
   }, [span]);
 
@@ -191,10 +195,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
       setTermHeight(h);
       try { localStorage.setItem(prefKey('termHeight'), String(h)); } catch {}
       if (termRef.current && fitRef.current) {
-        try {
-          fitRef.current!.fit();
-          api.resize(session.id, termRef.current!.cols, termRef.current!.rows).catch(() => {});
-        } catch {}
+        try { fitRef.current!.fit(); } catch {}
       }
     }
     function onUp() {
