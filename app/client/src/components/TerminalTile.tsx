@@ -7,7 +7,9 @@ import type { TerminalSession, OutputFrame, InputChunk } from '@/types/domain';
 import { api } from '@/lib/api';
 import { createStream, ConnState } from '@/lib/ws';
 
-export function TerminalTile({ session, onClose }: { session: TerminalSession; onClose: (id: string) => void }) {
+import type { Project } from '@/types/domain';
+
+export function TerminalTile({ session, project, onClose }: { session: TerminalSession; project: Project | null; onClose: (id: string) => void }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
@@ -77,11 +79,13 @@ export function TerminalTile({ session, onClose }: { session: TerminalSession; o
 
   const footerState = conn === 'Live' ? 'live' : conn === 'Polling' ? 'polling' : 'reconnecting';
 
+  const labelCmd = session.command?.[0] ? session.command[0] : 'shell';
+  const headerTitle = `${project?.name || session.cwd.split('/').pop()} • ${labelCmd} • pid ${session.pid ?? '—'}`;
+
   return (
     <div className="tile">
       <div className="tile-h">
-        <strong style={{ marginRight: 8 }}>{session.cwd.split('/').pop()}</strong>
-        <span>PID {session.pid ?? '—'}</span>
+        <strong style={{ marginRight: 8 }}>{headerTitle}</strong>
         <span>• {session.status}{session.exitCode !== undefined ? ` (${session.exitCode})` : ''}</span>
         <div style={{ marginLeft: 'auto' }}>
           <button className="btn" onClick={() => api.stopSession(session.id)}>Stop</button>
