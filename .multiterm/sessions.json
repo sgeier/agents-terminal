@@ -248,6 +248,90 @@
       ],
       "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
       "createdAt": "2025-09-21T21:51:16.945Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T22:00:51.484Z"
+    },
+    {
+      "id": "f8e63237-5e45-4920-a56d-6ab260a13ebb",
+      "pid": 15260,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-21T22:03:28.247Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-21T22:05:23.588Z"
+    },
+    {
+      "id": "1015ce01-89aa-4e33-b6e0-e4e6c36a30f0",
+      "pid": 16717,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-22T06:19:02.296Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-22T16:18:57.892Z"
+    },
+    {
+      "id": "e3b1e627-4143-40e9-8d0d-70ed3267619d",
+      "pid": 27392,
+      "command": [
+        "codex"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-22T16:19:55.553Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-22T19:50:56.631Z"
+    },
+    {
+      "id": "924873e0-fbca-471e-b526-f797ff6814ed",
+      "pid": 41974,
+      "command": [
+        "codex",
+        "resume",
+        "--last"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-22T20:01:47.695Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-22T20:02:14.759Z"
+    },
+    {
+      "id": "7a545442-5d58-480a-abb5-b3f420f1b5f4",
+      "pid": 42921,
+      "command": [
+        "codex",
+        "resume",
+        "--last",
+        "-a",
+        "never",
+        "-s",
+        "danger-full-access"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-22T20:02:32.397Z",
+      "status": "exited",
+      "exitCode": 0,
+      "exitedAt": "2025-09-22T20:22:36.987Z"
+    },
+    {
+      "id": "7bcce135-9473-468e-8238-89dddb91a87b",
+      "pid": 65036,
+      "command": [
+        "codex",
+        "-a",
+        "never",
+        "-s",
+        "danger-full-access"
+      ],
+      "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
+      "createdAt": "2025-09-22T20:26:25.195Z",
       "status": "running"
     }
   ]

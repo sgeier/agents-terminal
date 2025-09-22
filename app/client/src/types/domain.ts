@@ -6,6 +6,9 @@ export interface Project {
   cwd: string; // absolute; parent of .multiterm
   type: ProjectType;
   autostart?: boolean;
+  bgColor?: string;
+  bgImage?: string;
+  bgOpacity?: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -6,6 +6,10 @@ export interface Project {
   cwd: string; // absolute; parent of .multiterm
   type: ProjectType;
   autostart?: boolean;
+  // UI preferences (persisted in .multiterm/project.json)
+  bgColor?: string;  // CSS color
+  bgImage?: string;  // image URL (served by browser)
+  bgOpacity?: number; // 0..1 overlay alpha when image is set
   createdAt: string;
   updatedAt: string;
 }
@@ -28,4 +32,3 @@ export interface TerminalSession {
 
 export interface OutputFrame { sessionId: string; seq: number; ts: number; dataBase64: string; }
 export interface InputChunk  { sessionId: string; seq: number; dataBase64: string; isFinal?: boolean; }
-

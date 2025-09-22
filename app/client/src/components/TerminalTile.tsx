@@ -9,7 +9,7 @@ import { createStream, ConnState } from '@/lib/ws';
 
 import type { Project } from '@/types/domain';
 
-export function TerminalTile({ session, project, onClose, sync, onBroadcast }: { session: TerminalSession; project: Project | null; onClose: (id: string) => void; sync: boolean; onBroadcast: (fromId: string, bytes: Uint8Array) => void }) {
+export function TerminalTile({ session, project, onClose, sync, voiceGlobal, align, onBroadcast }: { session: TerminalSession; project: Project | null; onClose: (id: string) => void; sync: boolean; voiceGlobal: boolean; align: ({ span: number; height: number; tick: number } | null); onBroadcast: (fromId: string, bytes: Uint8Array) => void }) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -24,6 +24,9 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
   const inputTimerRef = useRef<number | null>(null);
   const projectId = project?.id || session.projectId;
   const prefKey = useMemo(() => (k: string) => `mt.${projectId}.${k}`, [projectId]);
+  const [projBg, setProjBg] = useState<string>(() => project?.bgColor || '');
+  const [projImg, setProjImg] = useState<string>(() => project?.bgImage || '');
+  const [projOpacity, setProjOpacity] = useState<number>(() => (typeof project?.bgOpacity === 'number' ? (project!.bgOpacity as number) : 0.94));
   const [fontSize, setFontSize] = useState<number>(() => {
     const raw = localStorage.getItem(prefKey('fontSize')) || localStorage.getItem('mt.fontSize.default');
     const n = raw ? Number(raw) : NaN; return Number.isFinite(n) ? n : 13;
@@ -36,7 +39,44 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     const raw = localStorage.getItem(prefKey('span'));
     const n = raw ? Number(raw) : NaN; return Number.isFinite(n) ? Math.min(12, Math.max(3, n)) : 4; // 4/12 default ~ 3 per row
   });
+  const [voiceLocal, setVoiceLocal] = useState<boolean>(() => {
+    const raw = localStorage.getItem(prefKey('voice'));
+    if (raw === '0' || raw === '1') return raw === '1';
+    return voiceGlobal; // default to global setting
+  });
+  // If no explicit local preference exists, follow changes to global
+  useEffect(() => {
+    const raw = localStorage.getItem(prefKey('voice'));
+    if (raw !== '0' && raw !== '1') setVoiceLocal(voiceGlobal);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceGlobal, prefKey]);
   // Renderer and resize strategy are fixed (Canvas + deferred PTY resize)
+  // Apply global align when requested
+  useEffect(() => {
+    if (!align) return;
+    const { span: aSpan, height: aHeight } = align;
+    const nextH = Math.max(180, Math.min(window.innerHeight - 160, aHeight));
+    // Preserve current span if aSpan <= 0
+    if (aSpan > 0) {
+      const nextSpan = Math.min(12, Math.max(3, aSpan));
+      if (span !== nextSpan) {
+        setSpan(nextSpan);
+        try { localStorage.setItem(prefKey('span'), String(nextSpan)); } catch {}
+      }
+    }
+    if (termHeight !== nextH) {
+      setTermHeight(nextH);
+      try { localStorage.setItem(prefKey('termHeight'), String(nextH)); } catch {}
+    }
+    if (fitRef.current && termRef.current) {
+      try {
+        fitRef.current.fit();
+        const cols = termRef.current.cols, rows = termRef.current.rows;
+        api.resize(session.id, cols, rows).catch(() => {});
+      } catch {}
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [align?.tick]);
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains('dark');
@@ -45,12 +85,22 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
       fontFamily: 'Menlo, Monaco, Consolas, ui-monospace, monospace',
       scrollback: 5000,
       fontSize,
-      theme: isDark ? {
-        background: '#0b1220',
-        foreground: '#e5e7eb',
-        cursor: '#22d3ee',
-        selection: '#1f2937'
-      } : undefined,
+      theme: ((): any => {
+        const darkBg = projBg || '#0b1220';
+        const alpha = Math.min(1, Math.max(0.0, projOpacity));
+        const transparentHint = projImg ? `rgba(11,18,32,${alpha || 0.94})` : darkBg;
+        const darkTheme = {
+          background: transparentHint,
+          foreground: '#e5e7eb',
+          cursor: '#22d3ee',
+          selection: '#1f2937'
+        };
+        if (isDark) return darkTheme;
+        if (projBg) return { background: projBg } as any;
+        // Light default: keep default xterm theme unless image provided
+        if (projImg) return { background: `rgba(255,255,255,${alpha || 0.92})` } as any;
+        return undefined;
+      })(),
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
@@ -210,6 +260,47 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
     };
   }, [session.id]);
 
+  // Apply theme updates when project color/image/opacity or dark mode changes
+  useEffect(() => {
+    const applyTheme = () => {
+      if (!termRef.current) return;
+      const isDark = document.documentElement.classList.contains('dark');
+      const darkBg = projBg || '#0b1220';
+      const alpha = Math.min(1, Math.max(0.0, projOpacity));
+      const theme: any = isDark
+        ? { background: (projImg ? `rgba(11,18,32,${alpha || 0.94})` : darkBg), foreground: '#e5e7eb', cursor: '#22d3ee', selection: '#1f2937' }
+        : (projBg ? { background: projBg } : (projImg ? { background: `rgba(255,255,255,${alpha || 0.92})` } : undefined));
+      try { (termRef.current.options as any).theme = theme; } catch {}
+    };
+    applyTheme();
+    // Observe dark class changes to react to theme toggle
+    const mo = new MutationObserver(applyTheme);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => mo.disconnect();
+  }, [projBg, projImg, projOpacity, projectId]);
+
+  // Listen for project updates (bgColor/bgImage) from Projects modal
+  useEffect(() => {
+    const onProjectUpdated = (e: Event) => {
+      const p = (e as CustomEvent).detail as Project | undefined;
+      if (!p || p.id !== projectId) return;
+      setProjBg(p.bgColor || '');
+      setProjImg(p.bgImage || '');
+      setProjOpacity(typeof p.bgOpacity === 'number' ? p.bgOpacity : 0.94);
+    };
+    window.addEventListener('mt.project.updated', onProjectUpdated as any);
+    return () => {
+      window.removeEventListener('mt.project.updated', onProjectUpdated as any);
+    };
+  }, [projectId]);
+
+  // Also update if the project prop itself changes
+  useEffect(() => {
+    setProjBg(project?.bgColor || '');
+    setProjImg(project?.bgImage || '');
+    setProjOpacity(typeof project?.bgOpacity === 'number' ? (project!.bgOpacity as number) : 0.94);
+  }, [project?.bgColor, project?.bgImage, project?.bgOpacity, project?.id]);
+
   useEffect(() => { setStatus(session.status); }, [session.status]);
 
   useEffect(() => {
@@ -306,7 +397,18 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
   }
 
   return (
-    <div className={`tile ${focused ? 'active' : ''}`} ref={wrapperRef} style={{ gridColumn: `span ${span} / span ${span}` }}>
+    <div
+      className={`tile ${focused ? 'active' : ''}`}
+      ref={wrapperRef}
+      style={{
+        gridColumn: `span ${span} / span ${span}`,
+        background: projBg || undefined,
+        backgroundImage: projImg ? `url(${projImg})` : undefined,
+        backgroundRepeat: projImg ? 'no-repeat' : undefined,
+        backgroundPosition: projImg ? 'right top' : undefined,
+        backgroundSize: projImg ? '50% auto' : undefined,
+      }}
+    >
       <div className="tile-h">
         <strong style={{ marginRight: 8 }}>{headerTitle}</strong>
         <span>• {status}{session.exitCode !== undefined ? ` (${session.exitCode})` : ''}</span>
@@ -316,6 +418,7 @@ export function TerminalTile({ session, project, onClose, sync, onBroadcast }: {
           
           <button className="btn" title="Font smaller" onClick={() => adjustFont(-1)}>A−</button>
           <button className="btn" title="Font larger" onClick={() => adjustFont(+1)}>A+</button>
+          <button className="btn" title="Voice summary for this terminal" onClick={() => { const v = !voiceLocal; setVoiceLocal(v); try { localStorage.setItem(prefKey('voice'), v ? '1' : '0'); } catch {} }}>Voice: {voiceLocal ? 'On' : 'Off'}</button>
           {project && (
             <button className="btn" title="Open in Cursor" onClick={() => { api.openProjectInCursor(project.id).catch(() => {}); }}>Cursor</button>
           )}

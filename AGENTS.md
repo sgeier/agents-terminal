@@ -159,6 +159,10 @@ A local web app to spawn and interact with multiple terminal sessions per projec
 - Prefer adding small, well‑named helpers in `core/*` to keep API routes small.
 - Follow Conventional Commits and the repo conventions above.
 
+## Roadmap
+- High-level items are tracked in [docs/TODO.md](docs/TODO.md).
+- Upcoming: Voice Toggle (global and per‑terminal) with persisted prefs; respects `VOICE_UPDATES` and `CI`.
+
 ## Voice Updates (After Each Agent Turn)
 - Default: play a brief TTS summary after every agent turn presented to the user.
 - Voice: `nova` (TTS model `gpt-4o-mini-tts`, format `mp3`).

@@ -1,0 +1,22 @@
+{
+  "name": "codex-multiterm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local web app to spawn and interact with multiple terminal sessions (server + React client).",
+  "scripts": {
+    "setup": "npm --prefix app/server ci && npm --prefix app/client ci",
+
+    "run:server": "node scripts/kill-port.js 3001 && npm --prefix app/server run dev",
+    "run:ui": "npm --prefix app/client run dev",
+    "dev": "npm run run:server & npm run run:ui",
+
+    "build:server": "npm --prefix app/server run build",
+    "build:ui": "npm --prefix app/client run build",
+    "build": "npm run build:ui && npm run build:server",
+
+    "start": "node scripts/kill-port.js 3001 && node app/server/dist/index.js",
+    "serve": "npm run build && npm start",
+
+    "clean": "rm -rf app/server/dist app/client/dist || true"
+  }
+}

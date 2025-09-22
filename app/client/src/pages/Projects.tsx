@@ -109,9 +109,57 @@ export function Projects({ onOpen }: { onOpen: (project: Project) => void }) {
       </div>
       <div>
         {projects.map((p) => (
-          <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto auto', gap: 8, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+          <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr auto 1.5fr 1.6fr auto auto', gap: 8, alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
             <div><strong>{p.name}</strong> <small style={{ color: 'var(--muted)' }}>({p.type})</small></div>
             <div style={{ color: 'var(--muted)' }}>{p.cwd}</div>
+            {/* Background color */}
+            <span title="Terminal background color for this project" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="color"
+                value={p.bgColor || '#000000'}
+                onChange={async (e) => {
+                  const val = e.target.value || '';
+                  const updated = await api.updateProject(p.id, { bgColor: val });
+                  setProjects((v) => v.map((x) => (x.id === p.id ? updated : x)));
+                  try { window.dispatchEvent(new CustomEvent('mt.project.updated', { detail: updated })); } catch {}
+                }}
+                style={{ width: 32, height: 24, border: '1px solid var(--border)', borderRadius: 6, background: 'var(--btn-bg)' }}
+              />
+              <button className="btn" title="Clear color" onClick={async () => {
+                const updated = await api.updateProject(p.id, { bgColor: '' });
+                setProjects((v) => v.map((x) => (x.id === p.id ? updated : x)));
+                try { window.dispatchEvent(new CustomEvent('mt.project.updated', { detail: updated })); } catch {}
+              }}>Clear</button>
+            </span>
+            {/* Background image URL */}
+            <input
+              placeholder="background image URL (optional)"
+              value={p.bgImage || ''}
+              onChange={async (e) => {
+                const val = e.target.value || '';
+                const updated = await api.updateProject(p.id, { bgImage: val });
+                setProjects((v) => v.map((x) => (x.id === p.id ? updated : x)));
+                try { window.dispatchEvent(new CustomEvent('mt.project.updated', { detail: updated })); } catch {}
+              }}
+            />
+            {/* Overlay opacity for terminal background when image is set */}
+            <span title="Overlay opacity when image is set" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="range"
+                min={0.85}
+                max={1}
+                step={0.01}
+                value={p.bgOpacity ?? 0.94}
+                onChange={async (e) => {
+                  const val = Math.max(0.0, Math.min(1.0, parseFloat(e.target.value)));
+                  const updated = await api.updateProject(p.id, { bgOpacity: val });
+                  setProjects((v) => v.map((x) => (x.id === p.id ? updated : x)));
+                  try { window.dispatchEvent(new CustomEvent('mt.project.updated', { detail: updated })); } catch {}
+                }}
+                style={{ width: 120 }}
+              />
+              <small style={{ color: 'var(--muted)', minWidth: 48, textAlign: 'right' }}>{((p.bgOpacity ?? 0.94) * 100).toFixed(0)}%</small>
+            </span>
             <button className="btn" onClick={() => onOpen(p)}>Open</button>
             <button className="btn" onClick={() => api.deleteProject(p.id).then(() => {
               setProjects((v) => v.filter((x) => x.id !== p.id));

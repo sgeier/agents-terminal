@@ -90,3 +90,8 @@ Self-test: `curl 'http://localhost:3001/readyz?selftest=1'` → `{ ok: true, ...
 - `make setup` — install server and client deps.
 - `make run-server`, `make run-ui` — dev servers.
 - `make build` — builds server TS and client assets; server will serve client from `app/client/dist`.
+
+## Roadmap
+
+- See TODO list: [docs/TODO.md](TODO.md)
+  - Includes a planned Voice Toggle (global and per‑terminal) with persisted preferences.
