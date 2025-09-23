@@ -1,9 +1,11 @@
 {
   "id": "0647eb63-3760-4e44-8095-7b79158a7f8b",
   "createdAt": "2025-09-21T12:55:07.890Z",
-  "updatedAt": "2025-09-21T12:55:07.890Z",
+  "updatedAt": "2025-09-22T22:07:31.715Z",
   "name": "Agent Terminal 3",
   "cwd": "/Users/sorengeier/Projects/agents-terminal-3",
   "type": "Codex",
-  "autostart": false
+  "autostart": false,
+  "bgColor": "#0c1136",
+  "bgOpacity": 0.91
 }

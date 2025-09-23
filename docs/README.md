@@ -48,6 +48,9 @@ Self-test: `curl 'http://localhost:3001/readyz?selftest=1'` → `{ ok: true, ...
 - Scrollback: in-memory ring buffer ≤ 5000 lines per session.
 - CORS: defaults to localhost ports (5173, 3000–3002). Override with `CORS_ORIGIN` (comma-separated).
 - Env: `PORT=3001`, `CORS_ORIGIN=http://localhost:5173`.
+- Logging: `LOG_LEVEL` controls verbosity (`debug`, `info`, `warn`, `error`, `silent`).
+  - Default is `info` (debug events like `io.output` are suppressed).
+  - Use `LOG_LEVEL=debug` when diagnosing IO; `LOG_LEVEL=silent` to disable all logs.
 
 ### REST Endpoints
 

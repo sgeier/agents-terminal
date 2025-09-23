@@ -15,7 +15,24 @@ function sanitize(input) {
         return '';
     }
 }
+const ORDER = {
+    debug: 10,
+    info: 20,
+    warn: 30,
+    error: 40,
+};
+// Resolve log level once at module load
+const rawLevel = String(process.env.LOG_LEVEL || 'info').toLowerCase();
+const effectiveLevel = rawLevel === 'off' || rawLevel === 'silent' || rawLevel === 'none'
+    ? 'silent'
+    : (['debug', 'info', 'warn', 'error'].includes(rawLevel)
+        ? rawLevel
+        : 'info');
+const THRESHOLD = effectiveLevel === 'silent' ? Infinity : ORDER[effectiveLevel];
 function log(level, msg, meta = {}) {
+    // Fast path: skip building log entry if below threshold
+    if (ORDER[level] < THRESHOLD)
+        return;
     const entry = { ts: ts(), level, msg, ...meta };
     const line = JSON.stringify(entry);
     // eslint-disable-next-line no-console
