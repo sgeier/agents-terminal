@@ -3,11 +3,14 @@ import { Terminal } from 'xterm';
 import { FitAddon } from '@xterm/addon-fit';
 // WebGL renderer disabled for robustness
 import 'xterm/css/xterm.css';
+import { ArrowLeftRight, Volume2, VolumeX, ExternalLink, X } from 'lucide-react';
 import type { TerminalSession, OutputFrame, InputChunk } from '@/types/domain';
+import type { Project } from '@/types/domain';
 import { api } from '@/lib/api';
 import { createStream, ConnState } from '@/lib/ws';
-
-import type { Project } from '@/types/domain';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 export function TerminalTile({ session, project, onClose, sync, voiceGlobal, align, onBroadcast }: { session: TerminalSession; project: Project | null; onClose: (id: string) => void; sync: boolean; voiceGlobal: boolean; align: ({ span: number; height: number; tick: number } | null); onBroadcast: (fromId: string, bytes: Uint8Array) => void }) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -398,41 +401,121 @@ export function TerminalTile({ session, project, onClose, sync, voiceGlobal, ali
 
   return (
     <div
-      className={`tile ${focused ? 'active' : ''}`}
       ref={wrapperRef}
+      className={cn(
+        'group relative flex min-h-[240px] flex-col overflow-hidden rounded-xl border border-border/70 bg-card/80 shadow-lg backdrop-blur transition-all duration-200',
+        focused && 'ring-2 ring-primary/60 ring-offset-2 ring-offset-background'
+      )}
       style={{
         gridColumn: `span ${span} / span ${span}`,
-        background: projBg || undefined,
-        backgroundImage: projImg ? `url(${projImg})` : undefined,
-        backgroundRepeat: projImg ? 'no-repeat' : undefined,
-        backgroundPosition: projImg ? 'right top' : undefined,
-        backgroundSize: projImg ? '50% auto' : undefined,
+        backgroundColor: projBg || undefined,
+        backgroundImage: projImg
+          ? `linear-gradient(135deg, rgba(8,12,20,0.85), rgba(8,12,20,0.55)), url(${projImg})`
+          : undefined,
+        backgroundSize: projImg ? 'cover' : undefined,
+        backgroundPosition: projImg ? 'center' : undefined,
       }}
     >
-      <div className="tile-h">
-        <strong style={{ marginRight: 8 }}>{headerTitle}</strong>
-        <span>• {status}{session.exitCode !== undefined ? ` (${session.exitCode})` : ''}</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
-          <button className="btn" title="Narrower" onClick={() => adjustSpan(-1)}>⬌−</button>
-          <button className="btn" title="Wider" onClick={() => adjustSpan(+1)}>⬌+</button>
-          
-          <button className="btn" title="Font smaller" onClick={() => adjustFont(-1)}>A−</button>
-          <button className="btn" title="Font larger" onClick={() => adjustFont(+1)}>A+</button>
-          <button className="btn" title="Voice summary for this terminal" onClick={() => { const v = !voiceLocal; setVoiceLocal(v); try { localStorage.setItem(prefKey('voice'), v ? '1' : '0'); } catch {} }}>Voice: {voiceLocal ? 'On' : 'Off'}</button>
-          {project && (
-            <button className="btn" title="Open in Cursor" onClick={() => { api.openProjectInCursor(project.id).catch(() => {}); }}>Cursor</button>
-          )}
-          <button className="btn" onClick={() => { api.deleteSession(session.id).then(() => onClose(session.id)); }}>Close</button>
+      <header className="flex flex-wrap items-center gap-2 border-b border-border/60 bg-card/70 px-4 py-3 text-sm">
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium text-foreground">{headerTitle}</p>
+          <p className="truncate text-xs text-muted-foreground">{session.cwd}</p>
         </div>
-      </div>
-      <div className="term" ref={ref} style={{ height: termHeight, flex: 'unset' }} onMouseDown={() => termRef.current?.focus()} />
-      <div className="resize-handle r" onPointerDown={startWidthDrag} />
-      <div className="resize-handle b" onPointerDown={startHeightDrag} />
-      <div className="resize-handle br" onPointerDown={(e) => { startWidthDrag(e); startHeightDrag(e); }} />
-      <div className="tile-f">
-        <span><span className={`status-dot ${footerState}`}></span> {conn}</span>
-        <span>Scrollback ≤ 5000 • PTY: {session.pty ? 'yes' : 'no'}</span>
-      </div>
+        <Badge variant="secondary" className="bg-secondary/80 text-secondary-foreground">
+          {status}
+          {session.exitCode !== undefined ? ` (${session.exitCode})` : ''}
+        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="ghost" size="icon" title="Narrower" onClick={() => adjustSpan(-1)}>
+            <ArrowLeftRight className="h-4 w-4 -scale-x-100" />
+          </Button>
+          <Button variant="ghost" size="icon" title="Wider" onClick={() => adjustSpan(+1)}>
+            <ArrowLeftRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Font smaller"
+            className="px-2 text-xs"
+            onClick={() => adjustFont(-1)}
+          >
+            A−
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Font larger"
+            className="px-2 text-xs"
+            onClick={() => adjustFont(+1)}
+          >
+            A+
+          </Button>
+          <Button
+            variant={voiceLocal ? 'secondary' : 'ghost'}
+            size="icon"
+            title="Toggle voice summaries for this terminal"
+            onClick={() => {
+              const v = !voiceLocal;
+              setVoiceLocal(v);
+              try { localStorage.setItem(prefKey('voice'), v ? '1' : '0'); } catch {}
+            }}
+          >
+            {voiceLocal ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </Button>
+          {project && (
+            <Button
+              variant="outline"
+              size="icon"
+              title="Open project in Cursor"
+              onClick={() => { api.openProjectInCursor(project.id).catch(() => {}); }}
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Close session"
+            onClick={() => { api.deleteSession(session.id).then(() => onClose(session.id)); }}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </header>
+
+      <div
+        ref={ref}
+        className="relative flex-1"
+        style={{ height: termHeight }}
+        onMouseDown={() => termRef.current?.focus()}
+      />
+
+      <div
+        className="absolute inset-y-[56px] right-0 w-2 cursor-col-resize bg-transparent transition group-hover:bg-primary/30"
+        onPointerDown={startWidthDrag}
+      />
+      <div
+        className="absolute bottom-0 left-[56px] right-[56px] h-2 cursor-row-resize bg-transparent transition group-hover:bg-primary/30"
+        onPointerDown={startHeightDrag}
+      />
+      <div
+        className="absolute bottom-0 right-0 h-3 w-3 cursor-nwse-resize bg-transparent transition group-hover:bg-primary/40"
+        onPointerDown={(e) => {
+          startWidthDrag(e);
+          startHeightDrag(e);
+        }}
+      />
+
+      <footer className="flex items-center justify-between gap-3 border-t border-border/60 bg-card/70 px-4 py-2 text-xs text-muted-foreground">
+        <span className="flex items-center gap-2">
+          <span className={cn('h-2 w-2 rounded-full',
+            footerState === 'live' ? 'bg-emerald-400' : footerState === 'polling' ? 'bg-amber-400' : footerState === 'closed' ? 'bg-slate-500' : 'bg-rose-500'
+          )} />
+          {conn}
+        </span>
+        <span className="hidden sm:inline-flex">Scrollback ≤ 5000 • PTY: {session.pty ? 'yes' : 'no'}</span>
+        <span className="sm:hidden">PTY: {session.pty ? 'yes' : 'no'}</span>
+      </footer>
     </div>
   );
 }
