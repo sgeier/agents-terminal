@@ -249,8 +249,11 @@ export default function App() {
           <button className="btn" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? '☀️' : '🌙'}</button>
         </div>
       </div>
-      <Modal title="Projects" open={showProjects} onClose={() => setShowProjects(false)}>
-        <Projects onOpen={(p) => { setShowProjects(false); onSelect(p.id); setProjects((v) => [...v.filter(x => x.id !== p.id), p]); }} />
+      <Modal title="Projects" open={showProjects} onClose={() => setShowProjects(false)} hideClose>
+        <Projects
+          onOpen={(p) => { setShowProjects(false); onSelect(p.id); setProjects((v) => [...v.filter(x => x.id !== p.id), p]); }}
+          onClose={() => setShowProjects(false)}
+        />
       </Modal>
       <Dashboard project={selectedProject} projects={projects} sessions={sessions} setSessions={setSessions} sync={sync} voice={voice} align={alignTarget ? { ...alignTarget, tick: alignTick } : null} onBroadcast={broadcastInput} />
     </div>
