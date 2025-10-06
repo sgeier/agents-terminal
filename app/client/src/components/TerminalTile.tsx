@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from '@xterm/addon-fit';
 // WebGL renderer disabled for robustness
 import 'xterm/css/xterm.css';
-import { ArrowLeftRight, Volume2, VolumeX, ExternalLink, X } from 'lucide-react';
+import { ArrowLeftRight, Volume2, VolumeX, ExternalLink, X, Eye, EyeOff } from 'lucide-react';
 import type { TerminalSession, OutputFrame, InputChunk } from '@/types/domain';
 import type { Project } from '@/types/domain';
 import { api } from '@/lib/api';
@@ -12,7 +12,40 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-export function TerminalTile({ session, project, onClose, sync, voiceGlobal, align, onBroadcast }: { session: TerminalSession; project: Project | null; onClose: (id: string) => void; sync: boolean; voiceGlobal: boolean; align: ({ span: number; height: number; tick: number } | null); onBroadcast: (fromId: string, bytes: Uint8Array) => void }) {
+const GRID_ROW_HEIGHT = 12; // px units for masonry layout steps
+const GRID_GAP = 16; // matches gap-4 (1rem)
+
+function translateOscControlBytes(input: Uint8Array): Uint8Array {
+  if (!input.length) return input;
+  let extra = 0;
+  for (let i = 0; i < input.length; i++) {
+    const b = input[i];
+    if (b === 0x9d || b === 0x9c) extra++;
+  }
+  if (!extra) return input;
+  const out = new Uint8Array(input.length + extra);
+  let j = 0;
+  for (let i = 0; i < input.length; i++) {
+    const b = input[i];
+    if (b === 0x9d) {
+      out[j++] = 0x1b; // ESC
+      out[j++] = 0x5d; // ]
+    } else if (b === 0x9c) {
+      out[j++] = 0x1b; // ESC
+      out[j++] = 0x5c; // \
+    } else {
+      out[j++] = b;
+    }
+  }
+  return out.subarray(0, j);
+}
+
+const decoder = new TextDecoder();
+function bytesToString(bytes: Uint8Array): string {
+  return decoder.decode(bytes);
+}
+
+export function TerminalTile({ session, project, onClose, sync, voiceGlobal, align, onBroadcast, customSpan, focusMode, onFocusToggle }: { session: TerminalSession; project: Project | null; onClose: (id: string) => void; sync: boolean; voiceGlobal: boolean; align: ({ span: number; height: number; tick: number } | null); onBroadcast: (fromId: string, bytes: Uint8Array) => void; customSpan?: number; focusMode: boolean; onFocusToggle: () => void }) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -42,11 +75,13 @@ export function TerminalTile({ session, project, onClose, sync, voiceGlobal, ali
     const raw = localStorage.getItem(prefKey('span'));
     const n = raw ? Number(raw) : NaN; return Number.isFinite(n) ? Math.min(12, Math.max(3, n)) : 4; // 4/12 default ~ 3 per row
   });
+  const [rowSpan, setRowSpan] = useState<number>(1);
   const [voiceLocal, setVoiceLocal] = useState<boolean>(() => {
     const raw = localStorage.getItem(prefKey('voice'));
     if (raw === '0' || raw === '1') return raw === '1';
     return voiceGlobal; // default to global setting
   });
+
   // If no explicit local preference exists, follow changes to global
   useEffect(() => {
     const raw = localStorage.getItem(prefKey('voice'));
@@ -59,8 +94,14 @@ export function TerminalTile({ session, project, onClose, sync, voiceGlobal, ali
     if (!align) return;
     const { span: aSpan, height: aHeight } = align;
     const nextH = Math.max(180, Math.min(window.innerHeight - 160, aHeight));
-    // Preserve current span if aSpan <= 0
-    if (aSpan > 0) {
+    // Use customSpan if provided, otherwise use align span
+    if (customSpan !== undefined) {
+      const nextSpan = Math.min(12, Math.max(3, customSpan));
+      if (span !== nextSpan) {
+        setSpan(nextSpan);
+        try { localStorage.setItem(prefKey('span'), String(nextSpan)); } catch {}
+      }
+    } else if (aSpan > 0) {
       const nextSpan = Math.min(12, Math.max(3, aSpan));
       if (span !== nextSpan) {
         setSpan(nextSpan);
@@ -79,7 +120,7 @@ export function TerminalTile({ session, project, onClose, sync, voiceGlobal, ali
       } catch {}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [align?.tick]);
+  }, [align?.tick, customSpan]);
 
   useEffect(() => {
     const isDark = document.documentElement.classList.contains('dark');
@@ -147,7 +188,13 @@ export function TerminalTile({ session, project, onClose, sync, voiceGlobal, ali
       try {
         while (writeQueue.length) {
           const chunk = writeQueue.shift()!;
-          (term as any).writeUtf8 ? (term as any).writeUtf8(chunk) : term.write(new TextDecoder().decode(chunk));
+          const normalized = translateOscControlBytes(chunk);
+          const writeUtf8 = (term as any).writeUtf8 as ((data: Uint8Array) => void) | undefined;
+          if (writeUtf8) {
+            writeUtf8.call(term, normalized);
+          } else {
+            term.write(bytesToString(normalized));
+          }
         }
       } catch {}
     };
@@ -315,6 +362,39 @@ export function TerminalTile({ session, project, onClose, sync, voiceGlobal, ali
     }
   }, [span]);
 
+  useEffect(() => {
+    if (!termRef.current || !fitRef.current) return;
+    const timer = window.setTimeout(() => {
+      try {
+        fitRef.current!.fit();
+        const cols = termRef.current!.cols, rows = termRef.current!.rows;
+        api.resize(session.id, cols, rows).catch(() => {});
+      } catch {}
+    }, 30);
+    return () => window.clearTimeout(timer);
+  }, [focusMode, session.id]);
+
+  const computeRowSpan = useCallback(() => {
+    if (focusMode) return;
+    const node = wrapperRef.current;
+    if (!node) return;
+    const height = node.getBoundingClientRect().height;
+    const step = GRID_ROW_HEIGHT + GRID_GAP;
+    const raw = (height + GRID_GAP) / step;
+    const next = Number.isFinite(raw) ? Math.max(1, Math.ceil(raw)) : 1;
+    setRowSpan((prev) => (prev === next ? prev : next));
+  }, [focusMode]);
+
+  useEffect(() => {
+    if (focusMode) return;
+    const node = wrapperRef.current;
+    if (!node) return;
+    const ro = new ResizeObserver(() => computeRowSpan());
+    computeRowSpan();
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, [computeRowSpan, focusMode]);
+
   const footerState = conn === 'Live' ? 'live' : conn === 'Polling' ? 'polling' : conn === 'Closed' ? 'closed' : 'reconnecting';
 
   const labelCmd = session.command?.[0] ? session.command[0] : 'shell';
@@ -377,11 +457,24 @@ export function TerminalTile({ session, project, onClose, sync, voiceGlobal, ali
     const startH = termHeight;
     function onMove(e: PointerEvent) {
       const dy = e.clientY - startY;
-      const h = Math.max(180, Math.min(window.innerHeight - 160, startH + dy));
+      const parentHeight = wrapperRef.current?.parentElement?.getBoundingClientRect().height;
+      const available = focusMode && parentHeight ? Math.max(parentHeight - 48, 180) : undefined;
+      const nextHeight = startH + dy;
+      const h = Math.max(180, available ? Math.min(available, nextHeight) : nextHeight);
       setTermHeight(h);
       try { localStorage.setItem(prefKey('termHeight'), String(h)); } catch {}
       if (termRef.current && fitRef.current) {
         try { fitRef.current!.fit(); } catch {}
+      }
+      if (!focusMode) {
+        const raf = typeof window !== 'undefined' && window.requestAnimationFrame
+          ? window.requestAnimationFrame.bind(window)
+          : null;
+        if (raf) {
+          raf(() => computeRowSpan());
+        } else {
+          setTimeout(() => computeRowSpan(), 0);
+        }
       }
     }
     function onUp() {
@@ -407,7 +500,9 @@ export function TerminalTile({ session, project, onClose, sync, voiceGlobal, ali
         focused && 'ring-2 ring-primary/60 ring-offset-2 ring-offset-background'
       )}
       style={{
-        gridColumn: `span ${span} / span ${span}`,
+        ...(focusMode
+          ? { height: '100%' }
+          : { gridColumn: `span ${span} / span ${span}`, gridRowEnd: `span ${rowSpan}` }),
         backgroundColor: projBg || undefined,
         backgroundImage: projImg
           ? `linear-gradient(135deg, rgba(8,12,20,0.85), rgba(8,12,20,0.55)), url(${projImg})`
@@ -426,6 +521,14 @@ export function TerminalTile({ session, project, onClose, sync, voiceGlobal, ali
           {session.exitCode !== undefined ? ` (${session.exitCode})` : ''}
         </Badge>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant={focusMode ? 'secondary' : 'ghost'}
+            size="icon"
+            title={focusMode ? "Exit focus mode" : "Focus this terminal"}
+            onClick={onFocusToggle}
+          >
+            {focusMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </Button>
           <Button variant="ghost" size="icon" title="Narrower" onClick={() => adjustSpan(-1)}>
             <ArrowLeftRight className="h-4 w-4 -scale-x-100" />
           </Button>
@@ -485,8 +588,8 @@ export function TerminalTile({ session, project, onClose, sync, voiceGlobal, ali
 
       <div
         ref={ref}
-        className="relative flex-1"
-        style={{ height: termHeight }}
+        className={cn('relative', focusMode ? 'flex-1 min-h-0' : 'flex-none')}
+        style={focusMode ? undefined : { height: termHeight }}
         onMouseDown={() => termRef.current?.focus()}
       />
 

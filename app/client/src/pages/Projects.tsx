@@ -20,13 +20,13 @@ import {
 export function Projects({ onOpen, onClose }: { onOpen: (project: Project) => void; onClose: () => void }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState<'All' | 'Shell' | 'Codex'>('All');
+  const [filterType, setFilterType] = useState<'All' | 'Shell' | 'Codex' | 'Claude'>('All');
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [showCreate, setShowCreate] = useState(false);
 
   const [name, setName] = useState('');
   const [cwd, setCwd] = useState<string>('');
-  const [type, setType] = useState<'Shell' | 'Codex'>('Shell');
+  const [type, setType] = useState<'Shell' | 'Codex' | 'Claude'>('Shell');
   const [pickerHint, setPickerHint] = useState<string>('');
   const dirInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -47,9 +47,10 @@ export function Projects({ onOpen, onClose }: { onOpen: (project: Project) => vo
   const stats = useMemo(() => {
     const total = projects.length;
     const codex = projects.filter((p) => p.type === 'Codex').length;
+    const claude = projects.filter((p) => p.type === 'Claude').length;
     const shell = projects.filter((p) => p.type === 'Shell').length;
     const last = projects.reduce((acc, p) => (p.updatedAt > acc ? p.updatedAt : acc), '');
-    return { total, codex, shell, last };
+    return { total, codex, claude, shell, last };
   }, [projects]);
 
   const create = async () => {
@@ -85,7 +86,8 @@ export function Projects({ onOpen, onClose }: { onOpen: (project: Project) => vo
           >
             <option value="All">All types</option>
             <option value="Shell">Shell</option>
-            <option value="Codex">Agent</option>
+            <option value="Codex">Codex</option>
+            <option value="Claude">Claude</option>
           </select>
           <div className="flex items-center gap-2">
             <Button
@@ -173,7 +175,8 @@ export function Projects({ onOpen, onClose }: { onOpen: (project: Project) => vo
                   onChange={(e) => setType(e.target.value as any)}
                 >
                   <option value="Shell">Shell</option>
-                  <option value="Codex">Agent</option>
+                  <option value="Codex">Codex</option>
+                  <option value="Claude">Claude</option>
                 </select>
                 <Button variant="secondary" size="sm" onClick={create}>
                   Create
@@ -212,10 +215,11 @@ export function Projects({ onOpen, onClose }: { onOpen: (project: Project) => vo
         </Card>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-5">
         <MiniStat label="Total" value={stats.total} />
         <MiniStat label="Shell" value={stats.shell} />
-        <MiniStat label="Agents" value={stats.codex} />
+        <MiniStat label="Codex" value={stats.codex} />
+        <MiniStat label="Claude" value={stats.claude} />
         <MiniStat label="Last Updated" value={stats.last ? new Date(stats.last).toLocaleDateString() : '—'} />
       </div>
 
@@ -271,7 +275,7 @@ function MiniStat({ label, value }: { label: string; value: string | number }) {
 
 function ProjectCard({ p, onOpen, onChange, onDelete }: { p: Project; onOpen: () => void; onChange: (updated: Project) => void; onDelete: () => void }) {
   const [showCustomize, setShowCustomize] = useState(false);
-  const typeLabel = p.type === 'Codex' ? 'Agent' : 'Shell';
+  const typeLabel = p.type === 'Codex' ? 'Codex' : p.type === 'Claude' ? 'Claude' : 'Shell';
   return (
     <Card className="flex h-full flex-col gap-4 border-border/60 bg-card/80">
       <CardHeader className="flex flex-row items-start justify-between gap-3 pb-0">
@@ -352,7 +356,7 @@ function ProjectCard({ p, onOpen, onChange, onDelete }: { p: Project; onOpen: ()
 }
 
 function ProjectRow({ p, onOpen, onDelete }: { p: Project; onOpen: () => void; onDelete: () => void }) {
-  const typeLabel = p.type === 'Codex' ? 'Agent' : 'Shell';
+  const typeLabel = p.type === 'Codex' ? 'Codex' : p.type === 'Claude' ? 'Claude' : 'Shell';
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border/60 bg-card/70 px-4 py-3 text-sm">
       <div className="min-w-0 flex-1">
