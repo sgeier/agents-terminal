@@ -20,11 +20,11 @@ tests/
 
 ## Build, Test, and Development Commands
 Prefer Makefile targets as a single entrypoint:
-- `make setup` — install deps (e.g., `npm ci` or `pip install -e .[dev]`).
-- `make run` — run the local CLI/app.
-- `make test` — run tests with coverage.
-- `make lint` — lint and format checks.
-If Makefile isn’t available, defaults: Node (`npm test`, `npm run dev`, `npm run lint`) or Python (`pytest -q`, `ruff check .`, `black --check .`). See `docs/README.md` for details.
+- `make setup` — run `npm ci` in `app/server` and `app/client`.
+- `make run-server` / `make run-ui` — start the server or client dev process.
+- `make build` — build both bundles.
+- `make clean` — remove `node_modules` and build artifacts.
+If you’d rather skip `make`, run the equivalent `npm` commands listed in `docs/README.md`.
 
 ## Coding Style & Naming Conventions
 - Indentation: 2 spaces (JS/TS/JSON/YAML), 4 spaces (Python).
@@ -87,6 +87,7 @@ A local web app to spawn and interact with multiple terminal sessions per projec
 ## Environment & Defaults
 - macOS shell: respect `process.env.SHELL`, fallback `/bin/bash -l`
 - Windows shell: `powershell.exe -NoLogo -NoProfile`, fallback `cmd.exe`
+- Windows CLI resolution: set `CODEX_BIN` / `CLAUDE_BIN` (or `MULTITERM_CODEX_BIN` / `MULTITERM_CLAUDE_BIN`) if the CLIs aren’t on `PATH`.
 - Max sessions shown in UI: 12
 - Scrollback: ≤ 5000 lines (ring buffer per session)
 - CORS: allows localhost 5173/3000/3001/3002 by default; override `CORS_ORIGIN` (comma‑separated)
@@ -158,6 +159,7 @@ A local web app to spawn and interact with multiple terminal sessions per projec
 - Keep diffs focused; update docs and UI strings when changing endpoints.
 - Prefer adding small, well‑named helpers in `core/*` to keep API routes small.
 - Follow Conventional Commits and the repo conventions above.
+- `.multiterm/` state and `hansoft-mcp-debug.log` are local-only; leave them untracked (already in `.gitignore`).
 
 ## Roadmap
 - High-level items are tracked in [docs/TODO.md](docs/TODO.md).
