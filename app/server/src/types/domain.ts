@@ -1,4 +1,4 @@
-export type ProjectType = 'Codex' | 'Shell';
+export type ProjectType = 'Codex' | 'Claude' | 'Shell';
 
 export interface Project {
   id: string;
