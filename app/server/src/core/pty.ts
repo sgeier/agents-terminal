@@ -82,6 +82,64 @@ export function defaultShell(): { cmd: string; args: string[] } {
   return { cmd: shell, args: [] };
 }
 
+function resolveWindowsCli(command: string, extra?: { overrideKeys?: string[]; extraCandidates?: string[] }) {
+  const overrides = extra?.overrideKeys || [];
+  for (const key of overrides) {
+    const val = process.env[key];
+    if (val && fs.existsSync(val)) return { cmd: val } as { cmd: string; args?: string[] };
+  }
+
+  const envUpper = command.toUpperCase();
+  const direct = process.env[`${envUpper}_BIN`] || process.env[`MULTITERM_${envUpper}_BIN`];
+  const candidates: string[] = [];
+  if (direct) candidates.push(direct);
+
+  const appdata = process.env.APPDATA;
+  if (appdata) {
+    candidates.push(path.join(appdata, 'npm', `${command}.cmd`));
+    candidates.push(path.join(appdata, 'npm', `${command}.ps1`));
+  }
+  const user = process.env.USERPROFILE;
+  if (user) {
+    candidates.push(path.join(user, 'AppData', 'Roaming', 'npm', `${command}.cmd`));
+    candidates.push(path.join(user, 'AppData', 'Roaming', 'npm', `${command}.ps1`));
+  }
+  const local = process.env.LOCALAPPDATA;
+  if (local) {
+    candidates.push(path.join(local, 'Programs', 'Claude', `${command}.exe`));
+    candidates.push(path.join(local, 'Programs', 'Claude Code', `${command}.exe`));
+    candidates.push(path.join(local, 'Programs', 'Claude', `${command}.cmd`));
+    candidates.push(path.join(local, 'Programs', 'Claude Code', `${command}.cmd`));
+  }
+  const pf = process.env['ProgramFiles'];
+  if (pf) {
+    candidates.push(path.join(pf, 'nodejs', `${command}.cmd`));
+    candidates.push(path.join(pf, 'nodejs', `${command}.ps1`));
+    candidates.push(path.join(pf, 'nodejs', command));
+  }
+  const pf86 = process.env['ProgramFiles(x86)'];
+  if (pf86) {
+    candidates.push(path.join(pf86, 'nodejs', `${command}.cmd`));
+    candidates.push(path.join(pf86, 'nodejs', `${command}.ps1`));
+    candidates.push(path.join(pf86, 'nodejs', command));
+  }
+  if (extra?.extraCandidates) candidates.push(...extra.extraCandidates);
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      if (!fs.existsSync(candidate)) continue;
+    } catch { continue; }
+    const ext = path.extname(candidate).toLowerCase();
+    if (ext === '.ps1') {
+      const ps = 'powershell.exe';
+      return { cmd: ps, args: ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', candidate] };
+    }
+    return { cmd: candidate };
+  }
+  return null;
+}
+
 export function spawnProcess(
   cwd: string,
   argv?: string[],
@@ -94,56 +152,15 @@ export function spawnProcess(
   let cmd = argv?.[0] || shell.cmd;
   const args = argv ? argv.slice(1) : shell.args;
 
-  // If trying to spawn the Codex CLI but it's not on PATH, try common Windows global npm locations
-  if (os.platform() === 'win32' && cmd === 'codex') {
-    const override = process.env.CODEX_BIN || process.env.MULTITERM_CODEX_BIN;
-    type Resolved = { cmd: string; args?: string[] } | null;
-    const tryResolve = (): Resolved => {
-      const candidates: string[] = [];
-      if (override) candidates.push(override);
-      const appdata = process.env.APPDATA;
-      if (appdata) {
-        candidates.push(path.join(appdata, 'npm', 'codex.cmd'));
-        candidates.push(path.join(appdata, 'npm', 'codex.ps1'));
-      }
-      const user = process.env.USERPROFILE;
-      if (user) {
-        candidates.push(path.join(user, 'AppData', 'Roaming', 'npm', 'codex.cmd'));
-        candidates.push(path.join(user, 'AppData', 'Roaming', 'npm', 'codex.ps1'));
-      }
-      const pf = process.env['ProgramFiles'];
-      if (pf) {
-        candidates.push(path.join(pf, 'nodejs', 'codex.cmd'));
-        candidates.push(path.join(pf, 'nodejs', 'codex.ps1'));
-        candidates.push(path.join(pf, 'nodejs', 'codex'));
-      }
-      const pf86 = process.env['ProgramFiles(x86)'];
-      if (pf86) {
-        candidates.push(path.join(pf86, 'nodejs', 'codex.cmd'));
-        candidates.push(path.join(pf86, 'nodejs', 'codex.ps1'));
-        candidates.push(path.join(pf86, 'nodejs', 'codex'));
-      }
-      for (const p of candidates) {
-        try {
-          if (p && fs.existsSync(p)) {
-            const ext = path.extname(p).toLowerCase();
-            if (ext === '.ps1') {
-              // Run via PowerShell if only a PowerShell shim exists
-              const ps = 'powershell.exe';
-              const psArgs = ['-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', p];
-              return { cmd: ps, args: psArgs };
-            }
-            return { cmd: p };
-          }
-        } catch {}
-      }
-      return null;
-    };
-    const resolved = tryResolve();
+  if (os.platform() === 'win32') {
+    const resolved = cmd === 'codex'
+      ? resolveWindowsCli('codex', { overrideKeys: ['CODEX_BIN', 'MULTITERM_CODEX_BIN'] })
+      : cmd === 'claude'
+        ? resolveWindowsCli('claude', { overrideKeys: ['CLAUDE_BIN', 'MULTITERM_CLAUDE_BIN'] })
+        : null;
     if (resolved) {
       cmd = resolved.cmd;
-      if (resolved.args && resolved.args.length) {
-        // Prepend wrapper args (e.g., PowerShell -File codex.ps1)
+      if (resolved.args?.length) {
         (args as string[]).unshift(...resolved.args);
       }
     }
